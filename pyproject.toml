@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.backends.build"
+
+[project]
+name = "chronicler"
+version = "0.1.0"
+description = "Automated changelog and release notes generator from VCS history"
+requires-python = ">=3.11"
+dependencies = [
+    "pygithub",
+    "anthropic",
+    "openai",
+    "google-generativeai",
+    "typer",
+    "rich",
+    "pydantic",
+    "pyyaml",
+    "markitdown[pdf,docx,pptx]",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "ruff",
+]
+
+[project.scripts]
+chronicler = "chronicler.cli:app"
