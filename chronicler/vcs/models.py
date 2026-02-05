@@ -30,3 +30,13 @@ class FileNode(BaseModel):
     type: Literal["file", "dir"]
     size: int | None = None
     sha: str | None = None
+
+
+class CrawlResult(BaseModel):
+    """Result of crawling a single repository."""
+
+    metadata: RepoMetadata
+    tree: list[FileNode]
+    key_files: dict[str, str] = Field(
+        default_factory=dict, description="path -> content for key files"
+    )
