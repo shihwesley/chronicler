@@ -5,7 +5,7 @@ build-backend = "hatchling.backends.build"
 [project]
 name = "chronicler"
 version = "0.1.0"
-description = "Automated changelog and release notes generator from VCS history"
+description = "Living Technical Ledger - automated .tech.md generation for enterprise codebases"
 requires-python = ">=3.11"
 dependencies = [
     "pygithub",

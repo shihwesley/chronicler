@@ -35,7 +35,11 @@ class OpenAIProvider(LLMProvider):
                 {"role": "user", "content": user},
             ],
         )
+        if not response.choices:
+            raise ValueError("No choices in OpenAI response")
         choice = response.choices[0]
+        if not response.usage:
+            raise ValueError("No usage data in OpenAI response")
         return LLMResponse(
             content=choice.message.content or "",
             usage=TokenUsage(
@@ -62,6 +66,8 @@ class OpenAIProvider(LLMProvider):
             stream=True,
         )
         async for chunk in stream:
+            if not chunk.choices:
+                continue
             delta = chunk.choices[0].delta
             if delta.content:
                 yield delta.content

@@ -33,6 +33,8 @@ class ClaudeProvider(LLMProvider):
             system=system,
             messages=[{"role": "user", "content": user}],
         )
+        if not message.content or not hasattr(message.content[0], "text"):
+            raise ValueError("No text content in Claude response")
         return LLMResponse(
             content=message.content[0].text,
             usage=TokenUsage(

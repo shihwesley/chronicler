@@ -4,7 +4,7 @@ import asyncio
 import os
 from functools import cached_property
 
-from github import Auth, Github
+from github import Auth, Github, GithubException
 from github.Repository import Repository
 
 from chronicler.vcs.base import VCSProvider
@@ -56,8 +56,11 @@ class GitHubProvider(VCSProvider):
         def _sync() -> list[RepoMetadata]:
             try:
                 named_user = self._client.get_organization(org_or_user)
-            except Exception:
-                named_user = self._client.get_user(org_or_user)
+            except GithubException as e:
+                if e.status == 404:
+                    named_user = self._client.get_user(org_or_user)
+                else:
+                    raise
             repos = named_user.get_repos()
             return [self._build_repo_metadata(r) for r in repos]
 
@@ -102,6 +105,9 @@ class GitHubProvider(VCSProvider):
             content = repo.get_contents(path, ref=repo.default_branch)
             if isinstance(content, list):
                 raise ValueError(f"Path '{path}' is a directory, not a file.")
-            return content.decoded_content.decode()
+            try:
+                return content.decoded_content.decode("utf-8")
+            except UnicodeDecodeError:
+                raise ValueError(f"File '{path}' is not valid UTF-8 text")
 
         return await asyncio.to_thread(_sync)
