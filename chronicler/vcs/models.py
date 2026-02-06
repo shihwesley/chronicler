@@ -40,3 +40,6 @@ class CrawlResult(BaseModel):
     key_files: dict[str, str] = Field(
         default_factory=dict, description="path -> content for key files"
     )
+    converted_docs: dict[str, str] = Field(
+        default_factory=dict, description="path -> markdown for converted documents"
+    )

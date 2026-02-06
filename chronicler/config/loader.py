@@ -83,6 +83,25 @@ monorepo:
 #   provider: "local"          # sqs | pubsub | servicebus | local
 #   max_workers: 5
 
+# Document Conversion
+document_conversion:
+  enabled: true
+  formats:
+    pdf: true
+    docx: true
+    pptx: true
+    xlsx: false
+    images: true
+  ocr:
+    enabled: true
+    use_llm: false               # use LLM for OCR (slower, more accurate)
+  max_file_size_mb: 50
+  max_pages: 100
+  cache:
+    enabled: true
+    directory: ".chronicler/doc_cache"
+    ttl_days: 7
+
 # Logging
 log_level: "info"              # debug | info | warn | error
 log_format: "text"             # text | json

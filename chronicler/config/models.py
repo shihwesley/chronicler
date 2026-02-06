@@ -38,11 +38,40 @@ class MonorepoConfig(BaseModel):
     package_dirs: list[str] = ["packages", "apps", "services", "libs", "modules"]
 
 
+class FormatConfig(BaseModel):
+    pdf: bool = True
+    docx: bool = True
+    pptx: bool = True
+    xlsx: bool = False
+    images: bool = True
+
+
+class OCRConfig(BaseModel):
+    enabled: bool = True
+    use_llm: bool = False
+
+
+class DocCacheConfig(BaseModel):
+    enabled: bool = True
+    directory: str = ".chronicler/doc_cache"
+    ttl_days: int = 7
+
+
+class DocumentConversionConfig(BaseModel):
+    enabled: bool = True
+    formats: FormatConfig = Field(default_factory=FormatConfig)
+    ocr: OCRConfig = Field(default_factory=OCRConfig)
+    max_file_size_mb: int = 50
+    max_pages: int = 100
+    cache: DocCacheConfig = Field(default_factory=DocCacheConfig)
+
+
 class ChroniclerConfig(BaseModel):
     llm: LLMConfig = Field(default_factory=LLMConfig)
     queue: QueueConfig = Field(default_factory=QueueConfig)
     vcs: VCSConfig = Field(default_factory=VCSConfig)
     output: OutputConfig = Field(default_factory=OutputConfig)
     monorepo: MonorepoConfig = Field(default_factory=MonorepoConfig)
+    document_conversion: DocumentConversionConfig = Field(default_factory=DocumentConversionConfig)
     log_level: Literal["debug", "info", "warn", "error"] = "info"
     log_format: Literal["text", "json"] = "text"
