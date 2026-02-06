@@ -13,6 +13,7 @@ from rich.tree import Tree
 
 from .config import ChroniclerConfig, load_config
 from .config.loader import DEFAULT_CONFIG_TEMPLATE
+from .converter import DocumentConverter, should_convert
 from .vcs import CrawlResult, VCSCrawler, create_provider
 from .vcs.models import RepoMetadata
 
@@ -98,6 +99,13 @@ def _display_crawl_result(result: CrawlResult) -> None:
         tree.add(f"[green]{path}[/green]{size_str}")
     rprint(tree)
 
+    # Converted documents
+    if result.converted_docs:
+        doc_tree = Tree(f"[bold]Converted Documents[/bold] ({len(result.converted_docs)})")
+        for path, md in sorted(result.converted_docs.items()):
+            doc_tree.add(f"[magenta]{path}[/magenta] ({len(md)} chars)")
+        rprint(doc_tree)
+
 
 def _validate_repo_id(repo_id: str) -> tuple[str, str]:
     """Validate and split a repo identifier into (owner, repo_name).
@@ -117,11 +125,11 @@ def _cache_result(result: CrawlResult, base_dir: str) -> Path:
     owner = owner.replace("..", "_").replace("/", "_").replace("\\", "_")
     repo_name = repo_name.replace("..", "_").replace("/", "_").replace("\\", "_")
     cache_dir = Path(base_dir) / "cache" / owner
-    cache_dir.mkdir(parents=True, exist_ok=True)
     cache_path = cache_dir / f"{repo_name}.json"
-    # Final guard: ensure resolved path is within base_dir
+    # Validate path before creating directories
     if not cache_path.resolve().is_relative_to(Path(base_dir).resolve()):
         raise ValueError(f"Cache path escapes base directory: {cache_path}")
+    cache_dir.mkdir(parents=True, exist_ok=True)
     cache_path.write_text(result.model_dump_json(indent=2))
     return cache_path
 
@@ -130,9 +138,13 @@ def _cache_result(result: CrawlResult, base_dir: str) -> Path:
 def crawl(
     repo: str = typer.Argument(..., help="Repository path, URL, or org/repo"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Preview without writing"),
+    include_docs: bool | None = typer.Option(
+        None, "--include-docs/--no-docs", help="Convert documents found in repo"
+    ),
 ) -> None:
     """Crawl a repository and collect metadata."""
     cfg = _get_config()
+    do_docs = include_docs if include_docs is not None else cfg.document_conversion.enabled
     rprint(f"[bold]Crawling[/bold] {repo} (provider: {cfg.vcs.provider})...")
 
     try:
@@ -162,6 +174,11 @@ def crawl(
                 _display_crawl_result(result)
             else:
                 result = asyncio.run(crawler.crawl_repo(repo))
+                # Document conversion (local repos only)
+                if do_docs and _is_local_repo(repo):
+                    result = _convert_repo_docs(result, cfg)
+                elif do_docs:
+                    rprint("[dim]Document conversion available for local repos only[/dim]")
                 _display_crawl_result(result)
                 cache_path = _cache_result(result, cfg.output.base_dir)
                 rprint(f"\n[green]Cached:[/green] {cache_path}")
@@ -179,6 +196,74 @@ def crawl(
     except Exception as e:
         rprint(f"[red]Unexpected error:[/red] {e}")
         raise typer.Exit(1)
+
+
+def _is_local_repo(repo: str) -> bool:
+    """Check if a repo identifier refers to a local path."""
+    return Path(repo).exists()
+
+
+def _convert_repo_docs(result: CrawlResult, cfg: ChroniclerConfig) -> CrawlResult:
+    """Scan crawl tree for convertible documents and convert them."""
+    converter = DocumentConverter(cfg.document_conversion)
+    converted: dict[str, str] = {}
+    # Only files in the tree that exist locally
+    repo_root = Path(result.metadata.url) if Path(result.metadata.url).is_dir() else None
+    if repo_root is None:
+        return result
+    for node in result.tree:
+        if node.type != "file":
+            continue
+        if not should_convert(node.path, cfg.document_conversion):
+            continue
+        full_path = repo_root / node.path
+        if not full_path.is_file():
+            continue
+        try:
+            conv = converter.convert(full_path)
+            if conv is not None:
+                converted[node.path] = conv.markdown
+        except Exception:
+            pass
+    if converted:
+        result = result.model_copy(update={"converted_docs": converted})
+    return result
+
+
+@app.command()
+def convert(
+    file: str = typer.Argument(..., help="Path to document file to convert"),
+    output: str | None = typer.Option(None, "--output", "-o", help="Write markdown to file"),
+) -> None:
+    """Convert a document file to markdown."""
+    cfg = _get_config()
+    converter = DocumentConverter(cfg.document_conversion)
+
+    try:
+        conv_result = converter.convert(file)
+    except Exception as e:
+        rprint(f"[red]Error:[/red] {e}")
+        raise typer.Exit(1)
+
+    if conv_result is None:
+        rprint(f"[red]Error:[/red] Could not convert '{file}'")
+        raise typer.Exit(1)
+
+    if output:
+        Path(output).write_text(conv_result.markdown)
+        rprint(f"[green]Written to[/green] {output}")
+    else:
+        rprint(conv_result.markdown)
+
+    rprint(
+        Panel(
+            f"[dim]Source:[/dim]  {conv_result.source_path}\n"
+            f"[dim]Format:[/dim]  {conv_result.format}\n"
+            f"[dim]Cached:[/dim]  {conv_result.cached}",
+            title="Conversion Result",
+            border_style="green",
+        )
+    )
 
 
 @app.command()
