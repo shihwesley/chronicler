@@ -1,6 +1,7 @@
 """CLI entry point for Chronicler."""
 
 import asyncio
+import json
 from pathlib import Path
 from typing import Annotated
 
@@ -14,6 +15,9 @@ from rich.tree import Tree
 from .config import ChroniclerConfig, load_config
 from .config.loader import DEFAULT_CONFIG_TEMPLATE
 from .converter import DocumentConverter, should_convert
+from .drafter import Drafter
+from .llm import create_llm_provider
+from .output import TechMdValidator, TechMdWriter
 from .vcs import CrawlResult, VCSCrawler, create_provider
 from .vcs.models import RepoMetadata
 
@@ -270,18 +274,127 @@ def convert(
 def draft(
     repo: str = typer.Argument(..., help="Repository to generate .tech.md for"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Preview without writing"),
+    output: Annotated[
+        str | None, typer.Option("--output", "-o", help="Override output directory")
+    ] = None,
 ) -> None:
     """Generate .tech.md from crawled data."""
     cfg = _get_config()
     rprint(f"[bold]Drafting[/bold] .tech.md for {repo} (llm: {cfg.llm.provider})...")
 
+    # 1. Create VCS provider and crawl
+    try:
+        vcs_provider = create_provider(cfg.vcs)
+    except ValueError as e:
+        rprint(f"[red]Error:[/red] {e}")
+        raise typer.Exit(1)
+
+    crawler = VCSCrawler(vcs_provider, cfg.vcs)
+
+    try:
+        _validate_repo_id(repo)
+    except ValueError as e:
+        rprint(f"[red]Error:[/red] {e}")
+        raise typer.Exit(1)
+
+    try:
+        crawl_result = asyncio.run(crawler.crawl_repo(repo))
+    except Exception as e:
+        rprint(f"[red]Crawl failed:[/red] {e}")
+        raise typer.Exit(1)
+
+    # 2. Create LLM provider
+    try:
+        llm = create_llm_provider(cfg.llm)
+    except ValueError as e:
+        rprint(f"[red]Error:[/red] {e}")
+        raise typer.Exit(1)
+
+    # 3. Draft the .tech.md
+    drafter = Drafter(llm, cfg)
+    try:
+        tech_doc = asyncio.run(drafter.draft_tech_doc(crawl_result))
+    except Exception as e:
+        rprint(f"[red]Draft failed:[/red] {e}")
+        raise typer.Exit(1)
+
+    # 4. Write or preview
+    if dry_run:
+        # Split frontmatter from body for syntax highlighting
+        raw = tech_doc.raw_content
+        if raw.startswith("---"):
+            end = raw.find("---", 3)
+            if end != -1:
+                fm = raw[3:end].strip()
+                body = raw[end + 3:].strip()
+                rprint(Syntax(fm, "yaml", theme="monokai"))
+                rprint()
+                rprint(Syntax(body, "markdown", theme="monokai"))
+            else:
+                rprint(Syntax(raw, "markdown", theme="monokai"))
+        else:
+            rprint(Syntax(raw, "markdown", theme="monokai"))
+    else:
+        # Override output dir if --output given
+        out_cfg = cfg.output
+        if output:
+            out_cfg = out_cfg.model_copy(update={"base_dir": output})
+        writer = TechMdWriter(out_cfg)
+        dest = writer.write(tech_doc)
+        rprint(Panel(
+            f"[dim]File:[/dim]         {dest}\n"
+            f"[dim]Component:[/dim]    {tech_doc.component_id}\n"
+            f"[dim]Size:[/dim]         {len(tech_doc.raw_content)} bytes",
+            title="Draft Complete",
+            border_style="green",
+        ))
+
 
 @app.command()
 def validate(
     path: str = typer.Argument(".chronicler", help="Path to .chronicler directory"),
+    format: Annotated[
+        str, typer.Option("--format", "-f", help="Output format: table or json")
+    ] = "table",
 ) -> None:
     """Validate .tech.md files against schema."""
+    cfg = _get_config()
     rprint(f"[bold]Validating[/bold] {path}...")
+
+    validator = TechMdValidator(mode=cfg.output.validation)
+    results = validator.validate_directory(path)
+
+    if not results:
+        rprint("[yellow]No .tech.md files found.[/yellow]")
+        raise typer.Exit(0)
+
+    any_invalid = any(not r.valid for r in results)
+
+    if format == "json":
+        rprint(json.dumps([r.model_dump() for r in results], indent=2))
+    else:
+        table = Table(title=f"Validation Results ({len(results)} files)")
+        table.add_column("Path", style="cyan")
+        table.add_column("Status", justify="center")
+        table.add_column("Errors", justify="right", style="red")
+        table.add_column("Warnings", justify="right", style="yellow")
+
+        for r in results:
+            status = "[green]PASS[/green]" if r.valid else "[red]FAIL[/red]"
+            table.add_row(r.path, status, str(len(r.errors)), str(len(r.warnings)))
+        rprint(table)
+
+        # Show details for files with issues
+        for r in results:
+            if r.errors or r.warnings:
+                rprint(f"\n[bold]{r.path}[/bold]")
+                for err in r.errors:
+                    rprint(f"  [red]error:[/red] {err}")
+                for warn in r.warnings:
+                    rprint(f"  [yellow]warn:[/yellow] {warn}")
+
+    if any_invalid and cfg.output.validation == "strict":
+        raise typer.Exit(1)
 
 
 @config_app.command("show")
