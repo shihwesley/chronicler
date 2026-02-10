@@ -6,7 +6,7 @@ import re
 from collections import Counter
 
 from chronicler_core.drafter.models import FrontmatterModel, GovernanceModel
-from chronicler_core.vcs.models import FileNode, RepoMetadata
+from chronicler_core.vcs.models import CrawlResult, FileNode, RepoMetadata
 
 # Directory patterns that indicate architectural layer.
 _LAYER_PATTERNS: dict[str, list[str]] = {
@@ -20,14 +20,24 @@ _CODEOWNERS_PATHS = ("CODEOWNERS", ".github/CODEOWNERS")
 
 
 def generate_frontmatter(
-    metadata: RepoMetadata,
-    key_files: dict[str, str],
-    tree: list[FileNode],
+    metadata_or_crawl: RepoMetadata | CrawlResult,
+    key_files: dict[str, str] | None = None,
+    tree: list[FileNode] | None = None,
 ) -> FrontmatterModel:
     """Generate YAML frontmatter from repo metadata.
 
+    Accepts either a CrawlResult or the legacy (metadata, key_files, tree) args.
     Returns a FrontmatterModel with required .tech.md fields.
     """
+    if isinstance(metadata_or_crawl, CrawlResult):
+        metadata = metadata_or_crawl.metadata
+        key_files = metadata_or_crawl.key_files
+        tree = metadata_or_crawl.tree
+    else:
+        metadata = metadata_or_crawl
+        key_files = key_files or {}
+        tree = tree or []
+
     return FrontmatterModel(
         component_id=metadata.full_name,
         version="0.1.0",

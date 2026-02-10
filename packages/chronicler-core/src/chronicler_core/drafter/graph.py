@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import re
 
-from chronicler_core.vcs.models import FileNode, RepoMetadata
+from chronicler_core.vcs.models import CrawlResult, FileNode, RepoMetadata
 
 # Infrastructure patterns matched against Dockerfile content (case-insensitive)
 _INFRA_PATTERNS: list[tuple[str, str, str, str]] = [
@@ -154,14 +154,24 @@ def _humanize_label(name: str) -> str:
 
 
 def generate_connectivity_graph(
-    metadata: RepoMetadata,
-    key_files: dict[str, str],
-    tree: list[FileNode],
+    metadata_or_crawl: RepoMetadata | CrawlResult,
+    key_files: dict[str, str] | None = None,
+    tree: list[FileNode] | None = None,
 ) -> str:
     """Generate Mermaid connectivity graph from repo analysis.
 
+    Accepts either a CrawlResult or the legacy (metadata, key_files, tree) args.
     Returns valid Mermaid graph LR syntax string.
     """
+    if isinstance(metadata_or_crawl, CrawlResult):
+        metadata = metadata_or_crawl.metadata
+        key_files = metadata_or_crawl.key_files
+        tree = metadata_or_crawl.tree
+    else:
+        metadata = metadata_or_crawl
+        key_files = key_files or {}
+        tree = tree or []
+
     component_id = _sanitize_node_id(metadata.name)
     component_label = metadata.name
 

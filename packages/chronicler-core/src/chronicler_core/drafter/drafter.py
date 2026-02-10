@@ -39,21 +39,13 @@ class Drafter:
         context = ContextBuilder.from_crawl_result(crawl_result)
 
         # 2. Generate frontmatter
-        frontmatter = generate_frontmatter(
-            crawl_result.metadata,
-            crawl_result.key_files,
-            crawl_result.tree,
-        )
+        frontmatter = generate_frontmatter(crawl_result)
 
         # 3. Draft architectural intent (async LLM call)
         intent = await draft_architectural_intent(context, self.llm)
 
         # 4. Generate connectivity graph
-        graph = generate_connectivity_graph(
-            crawl_result.metadata,
-            crawl_result.key_files,
-            crawl_result.tree,
-        )
+        graph = generate_connectivity_graph(crawl_result)
 
         # 5. Assemble
         component_id = frontmatter.component_id
