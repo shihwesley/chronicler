@@ -1,0 +1,42 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "chronicler-enterprise"
+version = "0.1.0"
+description = "Enterprise plugins for Chronicler - cloud queues, RBAC, Neo4j, PR Engine"
+requires-python = ">=3.11"
+dependencies = [
+    "chronicler-core",
+    "pydantic>=2.0.0",
+]
+
+[project.optional-dependencies]
+sqs = ["boto3"]
+pubsub = ["google-cloud-pubsub"]
+azure = ["azure-servicebus"]
+neo4j = ["neo4j", "strawberry-graphql"]
+all = [
+    "boto3",
+    "google-cloud-pubsub",
+    "azure-servicebus",
+    "neo4j",
+    "strawberry-graphql",
+]
+dev = [
+    "pytest",
+    "pytest-asyncio>=0.21.0",
+    "moto[sqs]",
+]
+
+[project.entry-points."chronicler.plugins.queue"]
+sqs = "chronicler_enterprise.plugins.cloud_queue.sqs:SQSQueue"
+pubsub = "chronicler_enterprise.plugins.cloud_queue.pubsub:PubSubQueue"
+servicebus = "chronicler_enterprise.plugins.cloud_queue.servicebus:ServiceBusQueue"
+
+[project.entry-points."chronicler.plugins.rbac"]
+chronicler-rbac = "chronicler_enterprise.plugins.rbac.rbac:ChroniclerRBAC"
+
+[project.entry-points."chronicler.plugins.graph"]
+neo4j = "chronicler_enterprise.plugins.mnemon.neo4j_graph:Neo4jGraph"

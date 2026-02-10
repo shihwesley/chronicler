@@ -30,6 +30,7 @@ members = ["packages/*"]
 [tool.uv.sources]
 chronicler-core = { workspace = true }
 chronicler-lite = { workspace = true }
+chronicler-enterprise = { workspace = true }
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
