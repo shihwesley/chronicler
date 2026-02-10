@@ -1,0 +1,14 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "chronicler-lite"
+version = "0.1.0"
+description = "MemVid-backed storage layer for Chronicler"
+requires-python = ">=3.11"
+dependencies = [
+    "chronicler-core",
+    "memvid-sdk>=2.0.0",
+    "pyyaml",
+]

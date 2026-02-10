@@ -9,6 +9,7 @@ description = "Living Technical Ledger - automated .tech.md generation for enter
 requires-python = ">=3.11"
 dependencies = [
     "chronicler-core",
+    "chronicler-lite",
     "typer",
     "rich",
 ]
@@ -28,6 +29,7 @@ members = ["packages/*"]
 
 [tool.uv.sources]
 chronicler-core = { workspace = true }
+chronicler-lite = { workspace = true }
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

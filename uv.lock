@@ -16,6 +16,7 @@ resolution-markers = [
 members = [
     "chronicler",
     "chronicler-core",
+    "chronicler-lite",
 ]
 
 [[package]]
@@ -230,6 +231,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "chronicler-core" },
+    { name = "chronicler-lite" },
     { name = "rich" },
     { name = "typer" },
 ]
@@ -244,6 +246,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "chronicler-core", editable = "packages/chronicler-core" },
+    { name = "chronicler-lite", editable = "packages/chronicler-lite" },
     { name = "pytest", marker = "extra == 'dev'" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.21.0" },
     { name = "rich" },
@@ -274,6 +277,23 @@ requires-dist = [
     { name = "openai" },
     { name = "pydantic", specifier = ">=2.0.0" },
     { name = "pygithub" },
+    { name = "pyyaml" },
+]
+
+[[package]]
+name = "chronicler-lite"
+version = "0.1.0"
+source = { editable = "packages/chronicler-lite" }
+dependencies = [
+    { name = "chronicler-core" },
+    { name = "memvid-sdk" },
+    { name = "pyyaml" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "chronicler-core", editable = "packages/chronicler-core" },
+    { name = "memvid-sdk", specifier = ">=2.0.0" },
     { name = "pyyaml" },
 ]
 
@@ -983,6 +1003,22 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/d6/54/cfe61301667036ec958cb99bd3efefba235e65cdeb9c84d24a8293ba1d90/mdurl-0.1.2.tar.gz", hash = "sha256:bb413d29f5eea38f31dd4754dd7377d4465116fb207585f97bf925588687c1ba", size = 8729, upload-time = "2022-08-14T12:40:10.846Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b3/38/89ba8ad64ae25be8de66a6d463314cf1eb366222074cfda9ee839c56a4b4/mdurl-0.1.2-py3-none-any.whl", hash = "sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8", size = 9979, upload-time = "2022-08-14T12:40:09.779Z" },
+]
+
+[[package]]
+name = "memvid-sdk"
+version = "2.0.156"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/11/a3/934c660ed239849c430d461a928c199338ca1592e1aa398627cac1cc0e87/memvid_sdk-2.0.156.tar.gz", hash = "sha256:44b2b5b541faf448f1436bc2844827e06ca7fd48e5c095b5738374dd5dc7c41e", size = 9912013, upload-time = "2026-02-07T00:17:36.693Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/13/d6/65c714f859c83a3e7049dd54ce215b0edce8d023b9d940b90d46a7da541c/memvid_sdk-2.0.156-cp38-abi3-macosx_10_12_x86_64.whl", hash = "sha256:02d645d083afcd081025841f8866f33d36222401d3ba867afe43857971d3ffe9", size = 66506771, upload-time = "2026-02-07T00:17:22.139Z" },
+    { url = "https://files.pythonhosted.org/packages/b5/17/97fa83041d38a18b43e9772a28c02e5d3a2ba873058c91e18423cd555fb4/memvid_sdk-2.0.156-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:7ba9aed21210cafaf53362fa78b4e2fc24ad7b8182ad4494f424016d719a44f4", size = 64179495, upload-time = "2026-02-07T00:17:25.765Z" },
+    { url = "https://files.pythonhosted.org/packages/8a/e4/438d79117b823ae528bdf575d1aa1c8c0badd7446a3d93c2bff4f3008226/memvid_sdk-2.0.156-cp38-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:271e6005d42af347783be03e34ae974b49d0312fa49edcb6f4c0a901df919efd", size = 14707547, upload-time = "2026-02-07T00:17:28.655Z" },
+    { url = "https://files.pythonhosted.org/packages/c9/63/b64e96826511d82678cb7024effde3daa1ff303e5f8fc5e83cab78c5cc87/memvid_sdk-2.0.156-cp38-abi3-manylinux_2_35_x86_64.whl", hash = "sha256:2275f542bde999c87abc827d84dac07ba86327e4c07a97737c6dfcdde5b80010", size = 99933558, upload-time = "2026-02-07T00:17:31.743Z" },
+    { url = "https://files.pythonhosted.org/packages/e4/4f/6c70f40750b8b20529b5fc157655a1f3062829e3661f875d19b737e789ff/memvid_sdk-2.0.156-cp38-abi3-win_amd64.whl", hash = "sha256:75a932d6f621ddef82d94a255c2b6c8d957290131b1c39b84089323c4daee80e", size = 7404937, upload-time = "2026-02-07T00:17:34.888Z" },
 ]
 
 [[package]]
