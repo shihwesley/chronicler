@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import yaml
-from memvid import Memvid
+from memvid_sdk import Memvid
 
 from chronicler_core.interfaces.storage import SearchResult
 

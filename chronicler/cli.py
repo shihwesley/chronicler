@@ -29,6 +29,9 @@ app = typer.Typer(
 config_app = typer.Typer(help="Manage Chronicler configuration.")
 app.add_typer(config_app, name="config")
 
+queue_app = typer.Typer(help="Manage job queue.")
+app.add_typer(queue_app, name="queue")
+
 # Global state
 _config: ChroniclerConfig | None = None
 
@@ -417,6 +420,155 @@ def config_init(
         raise typer.Exit(1)
     target.write_text(DEFAULT_CONFIG_TEMPLATE)
     rprint(f"[green]Created[/green] {target}")
+
+
+# ---------------------------------------------------------------------------
+# Lite commands (search, deps, rebuild, queue)
+# ---------------------------------------------------------------------------
+
+
+@app.command()
+def search(
+    query: str = typer.Argument(..., help="Search query"),
+    k: int = typer.Option(10, "--k", help="Number of results to return"),
+    mode: str = typer.Option(
+        "auto", "--mode", help="Search mode: auto, lex, or vec"
+    ),
+    mv2_path: str = typer.Option(
+        ".chronicler/chronicler.mv2", "--mv2-path", help="Path to .mv2 file"
+    ),
+) -> None:
+    """Search the .mv2 knowledge base."""
+    from chronicler_lite.storage.memvid_storage import MemVidStorage
+
+    if mode not in ("auto", "lex", "vec"):
+        rprint(f"[red]Error:[/red] Invalid mode '{mode}'. Choose auto, lex, or vec.")
+        raise typer.Exit(1)
+
+    storage = MemVidStorage(path=mv2_path)
+    results = storage.search(query, k=k, mode=mode)
+
+    if not results:
+        rprint("[yellow]No results found.[/yellow]")
+        raise typer.Exit(0)
+
+    table = Table(title=f"Search Results ({len(results)})")
+    table.add_column("doc_id", style="cyan")
+    table.add_column("score", justify="right", style="green")
+    table.add_column("snippet", style="dim")
+
+    for r in results:
+        snippet = r.content[:80] + ("..." if len(r.content) > 80 else "")
+        table.add_row(r.doc_id, f"{r.score:.4f}", snippet)
+
+    rprint(table)
+
+
+@app.command()
+def deps(
+    component: str = typer.Argument(..., help="Component name for SPO lookup"),
+    mv2_path: str = typer.Option(
+        ".chronicler/chronicler.mv2", "--mv2-path", help="Path to .mv2 file"
+    ),
+) -> None:
+    """Show dependency slots for a component."""
+    from chronicler_lite.storage.memvid_storage import MemVidStorage
+
+    storage = MemVidStorage(path=mv2_path)
+    state = storage.state(component)
+
+    if not state:
+        rprint(f"[yellow]No state found for '{component}'.[/yellow]")
+        raise typer.Exit(0)
+
+    table = Table(title=f"State: {component}")
+    table.add_column("slot", style="cyan")
+    table.add_column("value", style="green")
+
+    for slot, value in state.items():
+        table.add_row(slot, str(value))
+
+    rprint(table)
+
+
+@app.command()
+def rebuild(
+    tech_md_dir: str = typer.Option(
+        ".chronicler", "--tech-md-dir", help="Directory containing .tech.md files"
+    ),
+    mv2_path: str = typer.Option(
+        ".chronicler/chronicler.mv2", "--mv2-path", help="Path to .mv2 output file"
+    ),
+) -> None:
+    """Rebuild .mv2 index from .tech.md files."""
+    from chronicler_lite.storage.memvid_storage import MemVidStorage
+
+    md_dir = Path(tech_md_dir)
+    files = list(md_dir.glob("*.tech.md"))
+
+    if not files:
+        rprint(f"[yellow]No .tech.md files found in {tech_md_dir}.[/yellow]")
+        raise typer.Exit(0)
+
+    storage = MemVidStorage(path=mv2_path)
+    storage.rebuild(tech_md_dir)
+
+    rprint(f"[green]Rebuilt[/green] {mv2_path} from {len(files)} .tech.md file(s).")
+
+
+@queue_app.command("status")
+def queue_status(
+    db_path: str = typer.Option(
+        ".chronicler/queue.db", "--db-path", help="Path to queue database"
+    ),
+) -> None:
+    """Show job queue statistics."""
+    from chronicler_lite.queue.sqlite_queue import SQLiteQueue
+
+    queue = SQLiteQueue(db_path=db_path)
+    stats = queue.stats()
+
+    table = Table(title="Queue Stats")
+    table.add_column("status", style="cyan")
+    table.add_column("count", justify="right", style="green")
+
+    for status, count in stats.items():
+        table.add_row(status, str(count))
+
+    rprint(table)
+
+
+@queue_app.command("run")
+def queue_run(
+    db_path: str = typer.Option(
+        ".chronicler/queue.db", "--db-path", help="Path to queue database"
+    ),
+) -> None:
+    """Process pending jobs from the queue."""
+    from rich.status import Status
+
+    from chronicler_lite.queue.sqlite_queue import SQLiteQueue
+
+    queue = SQLiteQueue(db_path=db_path)
+    processed = 0
+
+    with Status("[bold]Processing queue...", spinner="dots") as status:
+        while True:
+            job = queue.dequeue()
+            if job is None:
+                break
+
+            status.update(f"[bold]Processing job {job.id}...")
+            try:
+                # Stub: log payload, real pipeline wired later
+                rprint(f"[dim]Job {job.id}:[/dim] {json.dumps(job.payload)}")
+                queue.ack(job.id)
+                processed += 1
+            except Exception as e:
+                queue.nack(job.id, str(e))
+                rprint(f"[red]Error processing {job.id}:[/red] {e}")
+
+    rprint(f"[green]Done.[/green] Processed {processed} job(s).")
 
 
 if __name__ == "__main__":

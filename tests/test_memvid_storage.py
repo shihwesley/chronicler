@@ -14,10 +14,10 @@ import pytest
 # package installed.
 # ---------------------------------------------------------------------------
 
-_mock_memvid_module = ModuleType("memvid")
+_mock_memvid_module = ModuleType("memvid_sdk")
 _mock_memvid_cls = MagicMock(name="Memvid")
 _mock_memvid_module.Memvid = _mock_memvid_cls  # type: ignore[attr-defined]
-sys.modules["memvid"] = _mock_memvid_module
+sys.modules["memvid_sdk"] = _mock_memvid_module
 
 from chronicler_core.interfaces.storage import SearchResult, StoragePlugin  # noqa: E402
 from chronicler_lite.storage.memvid_storage import MemVidStorage, _split_frontmatter  # noqa: E402
