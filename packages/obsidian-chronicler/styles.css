@@ -1,0 +1,227 @@
+/* Chronicler .tech.md styling */
+.chronicler-doc .markdown-preview-view {
+  --tag-color: var(--interactive-accent);
+}
+
+.chronicler-doc .yaml-frontmatter {
+  background: var(--background-secondary);
+  border-left: 3px solid var(--interactive-accent);
+  padding: 8px;
+}
+
+.agent-link {
+  color: var(--interactive-accent);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+}
+
+.agent-link:hover {
+  text-decoration-style: solid;
+}
+
+/* Health Dashboard */
+.chronicler-health-stale {
+  color: var(--text-error);
+}
+
+.chronicler-health-ok {
+  color: var(--text-success);
+}
+
+.chronicler-health-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+  margin-bottom: 8px;
+}
+
+.chronicler-health-refresh {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--text-muted);
+}
+
+.chronicler-health-refresh:hover {
+  color: var(--text-normal);
+}
+
+.chronicler-health-summary {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+  margin-bottom: 8px;
+}
+
+.chronicler-health-stat {
+  padding: 2px 0;
+}
+
+.chronicler-health-section {
+  margin: 12px 0;
+}
+
+.chronicler-health-section-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: var(--text-muted);
+}
+
+.chronicler-health-list {
+  list-style: none;
+  padding-left: 8px;
+  margin: 4px 0;
+}
+
+.chronicler-health-item {
+  padding: 2px 0;
+}
+
+.chronicler-health-link {
+  color: var(--text-accent);
+  cursor: pointer;
+}
+
+.chronicler-health-link:hover {
+  text-decoration: underline;
+}
+
+.chronicler-health-detail {
+  color: var(--text-muted);
+  font-size: 0.9em;
+}
+
+.chronicler-health-empty {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.chronicler-health-layer {
+  padding: 4px 0;
+}
+
+.chronicler-health-layer-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.chronicler-health-layer-name {
+  font-weight: 500;
+}
+
+.chronicler-health-layer-items {
+  padding-left: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+
+.chronicler-health-hint {
+  margin-top: 12px;
+  padding: 6px 8px;
+  background: var(--background-secondary);
+  border-radius: 4px;
+  color: var(--text-muted);
+}
+
+/* Dependency Explorer */
+.chronicler-dep-tree .tree-item-self {
+  cursor: pointer;
+  padding: 2px 0;
+}
+
+.chronicler-dep-tree .tree-item-self:hover {
+  background: var(--background-modifier-hover);
+}
+
+.chronicler-dep-tree .tree-item-children.is-collapsed {
+  display: none;
+}
+
+.chronicler-dep-tree .collapse-icon {
+  display: inline-flex;
+  transition: transform 100ms ease;
+}
+
+.chronicler-dep-tree .collapse-icon.is-collapsed {
+  transform: rotate(-90deg);
+}
+
+.chronicler-dep-tree .collapse-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.chronicler-dep-tree .tree-item-inner {
+  font-weight: 500;
+}
+
+.chronicler-dep-tree .tree-item-flair {
+  font-size: 0.85em;
+  color: var(--text-muted);
+  margin-left: 4px;
+}
+
+.chronicler-dep-tree .tree-item-children {
+  padding-left: 16px;
+}
+
+.chronicler-dep-header {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+  margin-bottom: 8px;
+}
+
+.chronicler-dep-current-label {
+  color: var(--text-muted);
+  font-size: 0.9em;
+}
+
+.chronicler-dep-section {
+  margin: 8px 0;
+}
+
+.chronicler-dep-name {
+  color: var(--text-accent);
+}
+
+.chronicler-dep-name.chronicler-dep-missing {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.chronicler-dep-not-found {
+  color: var(--text-faint);
+  font-size: 0.85em;
+  margin-left: 4px;
+}
+
+.chronicler-dep-circular {
+  color: var(--text-error);
+  margin-right: 2px;
+}
+
+.chronicler-dep-depth-badge {
+  font-size: 0.8em;
+  color: var(--text-faint);
+  margin-left: 6px;
+  background: var(--background-secondary);
+  padding: 0 4px;
+  border-radius: 3px;
+}
+
+.chronicler-dep-empty {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.chronicler-dep-indent {
+  white-space: pre;
+}

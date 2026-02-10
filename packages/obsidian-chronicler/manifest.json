@@ -1,0 +1,9 @@
+{
+  "id": "chronicler-obsidian",
+  "name": "Chronicler",
+  "version": "1.0.0",
+  "minAppVersion": "1.0.0",
+  "description": "Sync and browse Chronicler technical docs in Obsidian",
+  "author": "Chronicler",
+  "isDesktopOnly": false
+}
