@@ -90,7 +90,7 @@ graph LR
 | 1 | 1 | packaging-spec | Monorepo restructure, chronicler-core extraction, pip install | completed |
 | 1 | 2 | llm-adapters-spec | Multi-LLM provider interface: Claude, OpenAI, Gemini, Ollama | completed |
 | 1 | 2 | freshness-spec | File watcher, merkle staleness, auto-regeneration | completed |
-| 2 | 1 | hooks-skill-spec | Claude Code hooks (ambient) + /chronicler skill (manual) | draft |
+| 2 | 1 | hooks-skill-spec | Claude Code hooks (ambient) + /chronicler skill (manual) | completed |
 | 2 | 2 | vscode-spec | TypeScript extension: generation + viewing + LLM provider | draft |
 | 2 | 2 | obsidian-spec | Sync daemon + vault adapter for graph/Dataview | draft |
 
