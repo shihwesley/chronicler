@@ -16,8 +16,8 @@
 | Spec | Phase | Sprint | Status | Last Updated |
 |------|-------|--------|--------|-------------|
 | packaging-spec | 1 | 1 | completed | 2026-02-10 |
-| llm-adapters-spec | 1 | 2 | draft | 2026-02-10 |
-| freshness-spec | 1 | 2 | draft | 2026-02-10 |
+| llm-adapters-spec | 1 | 2 | completed | 2026-02-10 |
+| freshness-spec | 1 | 2 | completed | 2026-02-10 |
 | hooks-skill-spec | 2 | 1 | draft | 2026-02-10 |
 | vscode-spec | 2 | 2 | draft | 2026-02-10 |
 | obsidian-spec | 2 | 2 | draft | 2026-02-10 |
@@ -36,6 +36,35 @@
   - `pyproject.toml` — explicit workspace members (was `packages/*`)
   - `chronicler/cli.py` — added `__version__` + `--version` callback
   - `tests/test_neo4j_graph.py` — skipif for optional strawberry-graphql dep
+
+### Phase 1, Sprint 2: llm-adapters-spec
+- **Status:** completed
+- **Started:** 2026-02-10
+- Actions taken:
+  - Added GeminiProvider (google-generativeai SDK)
+  - Added OllamaProvider (httpx REST client to localhost:11434)
+  - Added auto_detect_provider() with fallback chain: Anthropic > OpenAI > Google > Ollama
+  - Extended LLMConfig with "ollama"/"auto" provider types and base_url field
+  - Added httpx to core dependencies
+- **Tests:** 24 new tests, all passing
+- **Commit:** d2fe9fd (merged)
+- **Warning:** google.generativeai deprecated — migrate to google.genai in future pass
+
+### Phase 1, Sprint 2: freshness-spec
+- **Status:** completed
+- **Started:** 2026-02-10
+- Actions taken:
+  - Created freshness/ facade with check_staleness() and regenerate_stale()
+  - Staleness checker detects stale, uncovered, and orphaned docs
+  - FreshnessWatcher wraps watchdog with debounce and ignore patterns
+  - Regenerator stubs drafter integration (wired in hooks-skill-spec)
+  - Performance verified: <500ms for 100-file project
+- **Tests:** 12 new tests, all passing
+- **Commit:** 56cd104 (merged)
+
+### Phase 1 Combined Results
+- **Total tests:** 455 passed, 2 skipped, 0 failures
+- **Full suite runtime:** 2.63s
 
 ## 5-Question Reboot Check
 | Question | Answer |
