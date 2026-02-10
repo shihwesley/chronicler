@@ -92,7 +92,7 @@ graph LR
 | 1 | 2 | freshness-spec | File watcher, merkle staleness, auto-regeneration | completed |
 | 2 | 1 | hooks-skill-spec | Claude Code hooks (ambient) + /chronicler skill (manual) | completed |
 | 2 | 2 | vscode-spec | TypeScript extension: generation + viewing + LLM provider | completed |
-| 2 | 2 | obsidian-spec | Sync daemon + vault adapter for graph/Dataview | draft |
+| 2 | 2 | obsidian-spec | Sync daemon + vault adapter for graph/Dataview | completed |
 
 ## Spec Files
 

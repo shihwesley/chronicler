@@ -20,7 +20,7 @@
 | freshness-spec | 1 | 2 | completed | 2026-02-10 |
 | hooks-skill-spec | 2 | 1 | completed | 2026-02-10 |
 | vscode-spec | 2 | 2 | completed | 2026-02-10 |
-| obsidian-spec | 2 | 2 | draft | 2026-02-10 |
+| obsidian-spec | 2 | 2 | completed | 2026-02-10 |
 
 ### Phase 1, Sprint 1: packaging-spec
 - **Status:** completed
@@ -82,6 +82,18 @@
 - **Tests:** 33 passed (vitest, 180ms)
 - **Build:** Clean compilation (tsc)
 - **Commit:** 9e3af72 (merged)
+
+### Phase 2, Sprint 2: obsidian-spec
+- **Status:** completed
+- **Started:** 2026-02-10
+- Actions taken:
+  - Found existing implementation from phase-8a (prior orchestrate run)
+  - Agent validated existing code against spec, found 2 fixes needed
+  - Fixed dataview.py: protocol field lookup (was only checking 'via')
+  - Fixed frontmatter.py: added source-level tag carry-over
+  - 49 tests passing (including 4 new CLI integration tests)
+- **Tests:** 49 passed (pytest, 0.07s)
+- **Commit:** ce5931c (merged)
 
 ## 5-Question Reboot Check
 | Question | Answer |
