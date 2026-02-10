@@ -1,11 +1,15 @@
 """CLI entry point for Chronicler."""
 
+from __future__ import annotations
+
 import asyncio
 import json
+from collections import deque
 from pathlib import Path
 from typing import Annotated
 
 import typer
+import yaml
 from rich import print as rprint
 from rich.panel import Panel
 from rich.syntax import Syntax
@@ -17,6 +21,8 @@ from chronicler_core.config.loader import DEFAULT_CONFIG_TEMPLATE
 from chronicler_core.converter import DocumentConverter, should_convert
 from chronicler_core.drafter import Drafter
 from chronicler_core.llm import create_llm_provider
+from chronicler_core.merkle import MerkleTree, check_drift
+from chronicler_core.merkle.tree import compute_file_hash
 from chronicler_core.output import TechMdValidator, TechMdWriter
 from chronicler_core.vcs import CrawlResult, VCSCrawler, create_provider
 from chronicler_core.vcs.models import RepoMetadata
@@ -275,14 +281,41 @@ def convert(
 
 @app.command()
 def draft(
-    repo: str = typer.Argument(..., help="Repository to generate .tech.md for"),
+    repo: str = typer.Argument(".", help="Repository to generate .tech.md for"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Preview without writing"),
+    stale: Annotated[bool, typer.Option("--stale", help="Only regenerate stale docs")] = False,
     output: Annotated[
         str | None, typer.Option("--output", "-o", help="Override output directory")
     ] = None,
 ) -> None:
     """Generate .tech.md from crawled data."""
     cfg = _get_config()
+
+    # --stale mode: only regenerate docs whose source files changed
+    if stale:
+        root = Path(repo).resolve()
+        tree, was_fresh = _load_or_build_merkle(root)
+        if was_fresh:
+            rprint("[yellow]First scan — no drift baseline yet. Run full draft instead.[/yellow]")
+            return
+        stale_nodes = check_drift(tree)
+        if not stale_nodes:
+            rprint("[green]All docs up to date.[/green]")
+            return
+        rprint(f"[bold]{len(stale_nodes)} stale doc(s) found.[/bold] Regeneration would target:")
+        for node in stale_nodes:
+            rprint(f"  - {node.path} (doc: {node.doc_path or 'none'})")
+        # Update merkle tree with current hashes after identifying stale docs
+        for node in stale_nodes:
+            fpath = root / node.path
+            if fpath.is_file():
+                new_hash = compute_file_hash(fpath)
+                tree.update_node(node.path, source_hash=new_hash, doc_hash=node.doc_hash)
+        merkle_path = root / MERKLE_JSON
+        tree.save(merkle_path)
+        rprint(f"[green]Merkle tree updated.[/green] Saved to {merkle_path}")
+        return
+
     rprint(f"[bold]Drafting[/bold] .tech.md for {repo} (llm: {cfg.llm.provider})...")
 
     # 1. Create VCS provider and crawl
@@ -569,6 +602,242 @@ def queue_run(
                 rprint(f"[red]Error processing {job.id}:[/red] {e}")
 
     rprint(f"[green]Done.[/green] Processed {processed} job(s).")
+
+
+# ---------------------------------------------------------------------------
+# Merkle commands (check, blast-radius) and draft --stale support
+# ---------------------------------------------------------------------------
+
+MERKLE_JSON = ".chronicler/.merkle.json"
+
+
+def _load_or_build_merkle(root: Path) -> tuple[MerkleTree, bool]:
+    """Load an existing .merkle.json or build a fresh tree.
+
+    Returns (tree, was_fresh) where was_fresh is True if no file existed.
+    """
+    cfg = _get_config()
+    merkle_path = root / MERKLE_JSON
+    if merkle_path.is_file():
+        return MerkleTree.load(merkle_path), False
+    tree = MerkleTree.build(
+        root,
+        doc_dir=cfg.merkle.doc_dir,
+        ignore_patterns=cfg.merkle.ignore_patterns,
+    )
+    merkle_path.parent.mkdir(parents=True, exist_ok=True)
+    tree.save(merkle_path)
+    return tree, True
+
+
+@app.command()
+def check(
+    ci: Annotated[bool, typer.Option("--ci", help="Machine-readable output")] = False,
+    fail_on_stale: Annotated[bool, typer.Option("--fail-on-stale", help="Exit 1 if stale docs found")] = False,
+    path: Annotated[str, typer.Argument(help="Path to project root")] = ".",
+) -> None:
+    """Check docs for staleness against source file hashes."""
+    root = Path(path).resolve()
+    tree, was_fresh = _load_or_build_merkle(root)
+
+    if was_fresh:
+        msg = f"First scan complete — {len([n for n in tree.nodes.values() if n.source_hash])} files indexed, no drift baseline yet."
+        if ci:
+            typer.echo(msg)
+        else:
+            rprint(f"[yellow]{msg}[/yellow]")
+        return
+
+    stale_nodes = check_drift(tree)
+
+    if ci:
+        # Plain text, one stale path per line
+        for node in stale_nodes:
+            typer.echo(f"STALE {node.path}")
+        if not stale_nodes:
+            typer.echo("OK — all docs up to date")
+        typer.echo(f"root_hash={tree.root_hash}")
+    else:
+        table = Table(title="Drift Check")
+        table.add_column("File", style="cyan")
+        table.add_column("Status", justify="center")
+        table.add_column("Doc", style="dim")
+
+        # Show all leaf nodes (files with source_hash)
+        for node in sorted(tree.nodes.values(), key=lambda n: n.path):
+            if node.source_hash is None:
+                continue
+            if node in stale_nodes:
+                status = "[red]stale[/red]"
+            else:
+                status = "[green]ok[/green]"
+            doc = node.doc_path or "-"
+            table.add_row(node.path, status, doc)
+
+        rprint(table)
+        rprint(f"\n[dim]Root hash:[/dim] {tree.root_hash}")
+
+        if stale_nodes:
+            rprint(f"\n[red]{len(stale_nodes)} stale doc(s) found.[/red]")
+        else:
+            rprint("\n[green]All docs up to date.[/green]")
+
+    if fail_on_stale and stale_nodes:
+        raise typer.Exit(code=1)
+
+
+def _parse_tech_md_edges(tech_md_path: Path) -> list[dict]:
+    """Parse YAML frontmatter from a .tech.md file and return its edges list.
+
+    Each edge is expected to have at least a 'target' key, and optionally 'type'.
+    """
+    if not tech_md_path.is_file():
+        return []
+    content = tech_md_path.read_text(encoding="utf-8")
+    if not content.startswith("---"):
+        return []
+    end = content.find("---", 3)
+    if end == -1:
+        return []
+    try:
+        fm = yaml.safe_load(content[3:end])
+    except yaml.YAMLError:
+        return []
+    if not isinstance(fm, dict):
+        return []
+    edges = fm.get("edges", [])
+    if not isinstance(edges, list):
+        return []
+    return edges
+
+
+def _build_edge_graph(chronicler_dir: Path) -> dict[str, list[dict]]:
+    """Scan all .tech.md files and build component_id -> edges adjacency map."""
+    graph: dict[str, list[dict]] = {}
+    if not chronicler_dir.is_dir():
+        return graph
+    for md in sorted(chronicler_dir.glob("*.tech.md")):
+        edges = _parse_tech_md_edges(md)
+        # Derive component_id from the frontmatter or filename
+        content = md.read_text(encoding="utf-8")
+        component_id = md.stem  # fallback
+        if content.startswith("---"):
+            end = content.find("---", 3)
+            if end != -1:
+                try:
+                    fm = yaml.safe_load(content[3:end])
+                    if isinstance(fm, dict) and "component_id" in fm:
+                        component_id = fm["component_id"]
+                except yaml.YAMLError:
+                    pass
+        graph[component_id] = edges
+    return graph
+
+
+@app.command(name="blast-radius")
+def blast_radius(
+    changed: Annotated[str, typer.Option("--changed", help="File path that changed")] = ...,
+    depth: Annotated[int, typer.Option("--depth", help="Hop depth")] = 2,
+    path: Annotated[str, typer.Argument(help="Path to project root")] = ".",
+) -> None:
+    """Show blast radius of a changed file through doc edges."""
+    root = Path(path).resolve()
+    cfg = _get_config()
+    chronicler_dir = root / cfg.merkle.doc_dir
+
+    # Load merkle tree to find the changed file's doc
+    merkle_path = root / MERKLE_JSON
+    if not merkle_path.is_file():
+        rprint("[red]No .merkle.json found.[/red] Run 'chronicler check' first.")
+        raise typer.Exit(1)
+
+    tree = MerkleTree.load(merkle_path)
+    node = tree.nodes.get(changed)
+    if node is None:
+        rprint(f"[red]File not found in merkle tree:[/red] {changed}")
+        raise typer.Exit(1)
+
+    # Build adjacency graph from .tech.md edges
+    graph = _build_edge_graph(chronicler_dir)
+
+    # Find which component_id the changed file belongs to
+    # (the component whose doc covers this file)
+    start_component = None
+    if node.doc_path:
+        # Read the doc to get its component_id
+        doc_full = root / node.doc_path
+        if doc_full.is_file():
+            content = doc_full.read_text(encoding="utf-8")
+            if content.startswith("---"):
+                end = content.find("---", 3)
+                if end != -1:
+                    try:
+                        fm = yaml.safe_load(content[3:end])
+                        if isinstance(fm, dict):
+                            start_component = fm.get("component_id")
+                    except yaml.YAMLError:
+                        pass
+    if not start_component:
+        # Use the file path itself as a best-effort identifier
+        start_component = changed
+
+    # BFS over edge graph up to depth hops
+    # Build a reverse adjacency map (who points to whom)
+    all_targets: dict[str, set[str]] = {}
+    for comp, edges in graph.items():
+        for edge in edges:
+            target = edge.get("target", "") if isinstance(edge, dict) else ""
+            if target:
+                all_targets.setdefault(comp, set()).add(target)
+                # Bidirectional: if B depends on A, changing A affects B
+                all_targets.setdefault(target, set()).add(comp)
+
+    visited: set[str] = {start_component}
+    levels: list[list[str]] = []
+    frontier = {start_component}
+
+    for _ in range(depth):
+        next_level: list[str] = []
+        next_frontier: set[str] = set()
+        for comp in frontier:
+            for neighbor in all_targets.get(comp, set()):
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    next_level.append(neighbor)
+                    next_frontier.add(neighbor)
+        levels.append(sorted(next_level))
+        frontier = next_frontier
+
+    # Display
+    rprint(Panel(f"[bold]Blast radius for:[/bold] {changed}", border_style="red"))
+    rprint(f"\n[bold]Direct impact:[/bold] {start_component}")
+
+    any_impact = False
+    for i, level in enumerate(levels, 1):
+        label = f"{i}-hop dependencies"
+        if level:
+            any_impact = True
+            rprint(f"\n[bold]{label}:[/bold]")
+            for comp in level:
+                edge_type = ""
+                # Find the edge type from the graph
+                for src, edges in graph.items():
+                    for edge in edges:
+                        if isinstance(edge, dict):
+                            if edge.get("target") == comp or src == comp:
+                                edge_type = edge.get("type", "")
+                                break
+                    if edge_type:
+                        break
+                suffix = f" [dim]({edge_type})[/dim]" if edge_type else ""
+                rprint(f"  - {comp}{suffix}")
+        else:
+            rprint(f"\n[bold]{label}:[/bold] [dim]none[/dim]")
+
+    if any_impact:
+        rprint("\n[yellow]Recommended action:[/yellow] Review and update affected .tech.md files.")
+    else:
+        rprint("\n[green]Recommended action:[/green] No downstream impact detected.")
 
 
 if __name__ == "__main__":
