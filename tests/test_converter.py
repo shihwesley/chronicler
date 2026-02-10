@@ -116,14 +116,14 @@ class TestDocumentConverter:
 
     def test_convert_file_too_large(self, tmp_path):
         config = DocumentConversionConfig(
-            max_file_size_mb=0,  # 0 MB limit
+            max_file_size_mb=1,  # 1 MB limit
             cache=DocCacheConfig(enabled=False),
         )
         converter = DocumentConverter(config)
 
-        # Create a small file that exceeds the 0 MB limit
+        # Create a file that exceeds the 1 MB limit
         f = tmp_path / "big.pdf"
-        f.write_bytes(b"x" * 100)
+        f.write_bytes(b"x" * (1024 * 1024 + 1))
 
         mock_md = MagicMock()
         with patch.object(

@@ -5,7 +5,7 @@ import yaml
 from pathlib import Path
 
 from chronicler_core.config.models import OutputConfig
-from chronicler_core.drafter.models import TechDoc
+from chronicler_core.drafter.models import FrontmatterModel, GovernanceModel, TechDoc
 from chronicler_core.output.writer import TechMdWriter, _sanitize_component_id
 from chronicler_core.output.validator import (
     TechMdValidator,
@@ -58,13 +58,13 @@ class TestSanitizeComponentId:
 
 class TestTechMdWriter:
     def _make_tech_doc(self, component_id="test/repo"):
-        fm = {
-            "component_id": component_id,
-            "version": "0.1.0",
-            "layer": "logic",
-            "governance": {"verification_status": "ai_draft"},
-        }
-        yaml_str = yaml.dump(fm, default_flow_style=False, sort_keys=False)
+        fm = FrontmatterModel(
+            component_id=component_id,
+            version="0.1.0",
+            layer="logic",
+            governance=GovernanceModel(verification_status="ai_draft"),
+        )
+        yaml_str = yaml.dump(fm.model_dump(), default_flow_style=False, sort_keys=False)
         raw = f"---\n{yaml_str}---\n\n# {component_id}\n\nSome content.\n"
         return TechDoc(
             component_id=component_id,

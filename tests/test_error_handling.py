@@ -17,7 +17,7 @@ from openai import RateLimitError as OpenAIRateLimitError
 
 from chronicler_core.config.loader import _expand_env_vars
 from chronicler_core.config.models import OutputConfig
-from chronicler_core.drafter.models import TechDoc
+from chronicler_core.drafter.models import FrontmatterModel, TechDoc
 from chronicler_core.freshness.watcher import _DebouncedHandler, _MAX_STALE
 from chronicler_core.llm.claude import ClaudeProvider
 from chronicler_core.llm.gemini import GeminiProvider
@@ -197,7 +197,7 @@ def test_writer_handles_oserror_on_write(tmp_path):
     """TechMdWriter logs error and raises OSError on write failure."""
     config = OutputConfig(base_dir=str(tmp_path))
     writer = TechMdWriter(config)
-    doc = TechDoc(component_id="test", raw_content="content")
+    doc = TechDoc(component_id="test", frontmatter=FrontmatterModel(component_id="test"), raw_content="content")
 
     # Patch write_text to raise OSError instead of relying on file permissions
     with patch("pathlib.Path.write_text", side_effect=OSError("disk full")):
@@ -214,7 +214,7 @@ def test_writer_handles_yaml_parse_error_on_index_read(tmp_path, caplog):
     index_path = tmp_path / "_index.yaml"
     index_path.write_text("invalid: yaml: [unclosed", encoding="utf-8")
 
-    doc = TechDoc(component_id="test", raw_content="content")
+    doc = TechDoc(component_id="test", frontmatter=FrontmatterModel(component_id="test"), raw_content="content")
     writer.write(doc)
 
     assert any("Failed to parse index" in rec.message for rec in caplog.records)
@@ -229,7 +229,7 @@ def test_writer_handles_oserror_on_index_read(tmp_path, caplog):
     index_path = tmp_path / "_index.yaml"
     index_path.write_text("[]")
 
-    doc = TechDoc(component_id="test", raw_content="content")
+    doc = TechDoc(component_id="test", frontmatter=FrontmatterModel(component_id="test"), raw_content="content")
 
     original_read = Path.read_text
     def selective_read(self, *args, **kwargs):

@@ -11,7 +11,7 @@ from chronicler_core.drafter.graph import (
     _sanitize_node_id,
     _detect_infrastructure,
 )
-from chronicler_core.drafter.models import PromptContext, TechDoc
+from chronicler_core.drafter.models import FrontmatterModel, PromptContext, TechDoc
 from chronicler_core.drafter.prompts import PromptTemplate
 from chronicler_core.drafter.sections import draft_architectural_intent
 from chronicler_core.vcs.models import CrawlResult, FileNode, RepoMetadata
@@ -95,11 +95,11 @@ class TestGenerateFrontmatter:
             sample_crawl_result.key_files,
             sample_crawl_result.tree,
         )
-        assert "component_id" in fm
-        assert "version" in fm
-        assert "layer" in fm
-        assert fm["component_id"] == "acme/widget-api"
-        assert fm["version"] == "0.1.0"
+        assert hasattr(fm, "component_id")
+        assert hasattr(fm, "version")
+        assert hasattr(fm, "layer")
+        assert fm.component_id == "acme/widget-api"
+        assert fm.version == "0.1.0"
 
     def test_governance_verification_status(self, sample_crawl_result):
         fm = generate_frontmatter(
@@ -107,7 +107,7 @@ class TestGenerateFrontmatter:
             sample_crawl_result.key_files,
             sample_crawl_result.tree,
         )
-        assert fm["governance"]["verification_status"] == "ai_draft"
+        assert fm.governance.verification_status == "ai_draft"
 
     def test_infer_layer_api(self):
         tree = [
@@ -157,7 +157,7 @@ class TestGenerateFrontmatter:
             sample_crawl_result.key_files,
             sample_crawl_result.tree,
         )
-        assert isinstance(fm["edges"], list)
+        assert isinstance(fm.edges, list)
 
 
 # ---------------------------------------------------------------------------
@@ -296,18 +296,18 @@ class TestPromptTemplate:
 
 class TestAssembleTechMd:
     def test_has_yaml_frontmatter(self):
-        fm = {"component_id": "test", "version": "0.1.0", "layer": "logic"}
+        fm = FrontmatterModel(component_id="test", version="0.1.0", layer="logic")
         raw = _assemble_tech_md(fm, "test", "Some intent", "graph LR\n")
         assert raw.startswith("---\n")
         assert "\n---\n" in raw
 
     def test_contains_heading(self):
-        fm = {"component_id": "test"}
+        fm = FrontmatterModel(component_id="test")
         raw = _assemble_tech_md(fm, "test", "Intent text", "graph LR\n")
         assert "# test" in raw
 
     def test_contains_sections(self):
-        fm = {"component_id": "myapp"}
+        fm = FrontmatterModel(component_id="myapp")
         raw = _assemble_tech_md(fm, "myapp", "Intent here", "graph LR\n")
         assert "## Architectural Intent" in raw
         assert "Intent here" in raw
@@ -339,10 +339,10 @@ class TestDrafter:
         drafter = Drafter(llm=mock_llm_provider, config=sample_config)
         doc = await drafter.draft_tech_doc(sample_crawl_result)
 
-        assert doc.frontmatter["component_id"] == "acme/widget-api"
-        assert doc.frontmatter["governance"]["verification_status"] == "ai_draft"
-        assert "layer" in doc.frontmatter
-        assert "version" in doc.frontmatter
+        assert doc.frontmatter.component_id == "acme/widget-api"
+        assert doc.frontmatter.governance.verification_status == "ai_draft"
+        assert hasattr(doc.frontmatter, "layer")
+        assert hasattr(doc.frontmatter, "version")
 
     async def test_draft_tech_doc_calls_llm(
         self, sample_crawl_result, mock_llm_provider, sample_config

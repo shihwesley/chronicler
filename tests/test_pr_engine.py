@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, PropertyMock
 
 import pytest
 
-from chronicler_core.drafter.models import TechDoc
+from chronicler_core.drafter.models import FrontmatterModel, TechDoc
 from chronicler_enterprise.plugins.pr_engine.engine import PREngine, PREngineConfig
 
 
@@ -21,7 +21,9 @@ def _make_tech_doc(
 ) -> TechDoc:
     return TechDoc(
         component_id=component_id,
-        frontmatter={"layer": layer, "version": version},
+        frontmatter=FrontmatterModel(
+            component_id=component_id, layer=layer, version=version,
+        ),
         raw_content=raw_content,
     )
 

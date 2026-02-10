@@ -2,7 +2,7 @@
 
 import os
 
-from chronicler_core.config.models import LLMConfig as AppLLMConfig
+from chronicler_core.config.models import LLMSettings as AppLLMSettings
 from chronicler_core.llm.base import LLMProvider
 from chronicler_core.llm.claude import ClaudeProvider
 from chronicler_core.llm.gemini import GeminiProvider
@@ -18,7 +18,7 @@ _PROVIDER_MAP: dict[str, type[LLMProvider]] = {
 }
 
 
-def create_llm_provider(config: AppLLMConfig) -> LLMProvider:
+def create_llm_provider(config: AppLLMSettings) -> LLMProvider:
     """Create an LLM provider from app-level config.
 
     Resolves the API key from the env var in config.api_key_env, then

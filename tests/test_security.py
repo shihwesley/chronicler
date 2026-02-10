@@ -11,7 +11,7 @@ import pytest
 
 from chronicler_core.config.loader import _expand_env_vars
 from chronicler_core.config.models import MerkleConfig, OutputConfig
-from chronicler_core.drafter.models import TechDoc
+from chronicler_core.drafter.models import FrontmatterModel, TechDoc
 from chronicler_core.llm.models import LLMConfig
 from chronicler_core.llm.ollama import OllamaProvider, _validate_base_url
 from chronicler_core.merkle.scanner import MercatorScanner
@@ -35,8 +35,8 @@ def test_writer_path_traversal_blocked(tmp_path):
     with patch("chronicler_core.output.writer._sanitize_component_id", return_value="../../../etc/passwd"):
         malicious_doc = TechDoc(
             component_id="../../../etc/passwd",
+            frontmatter=FrontmatterModel(component_id="../../../etc/passwd"),
             raw_content="malicious content",
-            metadata={},
         )
 
         with pytest.raises(ValueError, match="Path escape detected"):
@@ -57,8 +57,8 @@ def test_writer_symlink_escape_blocked(tmp_path):
     # Also patch resolve() to simulate the symlink resolution
     doc = TechDoc(
         component_id="escape/payload",
+        frontmatter=FrontmatterModel(component_id="escape/payload"),
         raw_content="test",
-        metadata={},
     )
 
     outside_path = outside_dir / "evil.tech.md"

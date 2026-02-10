@@ -9,7 +9,7 @@ from chronicler_core.config.models import (
     ChroniclerConfig,
     DocumentConversionConfig,
     FormatConfig,
-    LLMConfig,
+    LLMSettings,
     MonorepoConfig,
     OCRConfig,
     OutputConfig,
@@ -51,9 +51,9 @@ class TestChroniclerConfigDefaults:
 # ── Individual config model validations ─────────────────────────────
 
 
-class TestLLMConfig:
+class TestLLMSettings:
     def test_defaults(self):
-        cfg = LLMConfig()
+        cfg = LLMSettings()
         assert cfg.model == "claude-sonnet-4-20250514"
         assert cfg.max_tokens == 4096
         assert cfg.timeout == 60
@@ -62,10 +62,10 @@ class TestLLMConfig:
 
     def test_invalid_provider_rejected(self):
         with pytest.raises(ValidationError):
-            LLMConfig(provider="badprovider")
+            LLMSettings(provider="badprovider")
 
     def test_custom_values(self):
-        cfg = LLMConfig(provider="openai", model="gpt-4o", max_tokens=8192)
+        cfg = LLMSettings(provider="openai", model="gpt-4o", max_tokens=8192)
         assert cfg.provider == "openai"
         assert cfg.model == "gpt-4o"
         assert cfg.max_tokens == 8192

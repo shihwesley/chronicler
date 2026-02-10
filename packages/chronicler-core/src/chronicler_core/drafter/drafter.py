@@ -8,7 +8,7 @@ from chronicler_core.config import ChroniclerConfig
 from chronicler_core.drafter.context import ContextBuilder
 from chronicler_core.drafter.frontmatter import generate_frontmatter
 from chronicler_core.drafter.graph import generate_connectivity_graph
-from chronicler_core.drafter.models import PromptContext, TechDoc
+from chronicler_core.drafter.models import FrontmatterModel, PromptContext, TechDoc
 from chronicler_core.drafter.sections import draft_architectural_intent
 from chronicler_core.llm.base import LLMProvider
 from chronicler_core.vcs.models import CrawlResult
@@ -56,7 +56,7 @@ class Drafter:
         )
 
         # 5. Assemble
-        component_id = frontmatter["component_id"]
+        component_id = frontmatter.component_id
         raw_content = _assemble_tech_md(frontmatter, component_id, intent, graph)
 
         return TechDoc(
@@ -69,13 +69,13 @@ class Drafter:
 
 
 def _assemble_tech_md(
-    frontmatter: dict,
+    frontmatter: FrontmatterModel,
     component_id: str,
     intent: str,
     graph: str,
 ) -> str:
     """Assemble a complete .tech.md string from its parts."""
-    yaml_block = yaml.dump(frontmatter, default_flow_style=False, sort_keys=False)
+    yaml_block = yaml.dump(frontmatter.model_dump(), default_flow_style=False, sort_keys=False)
 
     return (
         f"---\n{yaml_block}---\n\n"

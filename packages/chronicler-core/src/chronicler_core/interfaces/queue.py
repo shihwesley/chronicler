@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from enum import Enum
 from typing import Any, Protocol, runtime_checkable
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class JobStatus(str, Enum):
@@ -25,13 +25,20 @@ class Job(BaseModel):
     Mutable — status, timestamps, error, and attempts change over the job's lifetime.
     """
 
-    id: str
+    id: str = Field(min_length=1)
     payload: dict[str, Any]
     status: JobStatus = JobStatus.pending
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     error: str | None = None
-    attempts: int = 0
+    attempts: int = Field(default=0, ge=0)
+
+    @field_validator("id")
+    @classmethod
+    def validate_id(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("id cannot be empty or whitespace")
+        return v
 
 
 @runtime_checkable

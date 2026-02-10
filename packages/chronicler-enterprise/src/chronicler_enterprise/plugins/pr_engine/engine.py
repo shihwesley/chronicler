@@ -74,8 +74,8 @@ class PREngine:
         )
         pr_body = self._config.pr_body_template.format(
             component_id=tech_doc.component_id,
-            layer=tech_doc.frontmatter.get("layer", "unknown"),
-            version=tech_doc.frontmatter.get("version", "0.1.0"),
+            layer=tech_doc.frontmatter.layer,
+            version=tech_doc.frontmatter.version,
         )
         pr = repo.create_pull(
             title=pr_title,

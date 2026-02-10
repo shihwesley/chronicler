@@ -233,9 +233,10 @@ def test_blast_radius_one_hop(tmp_path: Path):
     tree.save(chronicler_dir / ".merkle.json")
 
     # Manually set doc_path on the main.py node so blast-radius can find the component
+    from dataclasses import replace
     node = tree.nodes.get("src/main.py")
     if node:
-        node.doc_path = ".chronicler/my-app.tech.md"
+        tree.nodes["src/main.py"] = replace(node, doc_path=".chronicler/my-app.tech.md")
         tree.save(chronicler_dir / ".merkle.json")
 
     result = runner.invoke(app, ["blast-radius", "--changed", "src/main.py", str(tmp_path)])

@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from chronicler_core.config.models import ChroniclerConfig, VCSConfig
+from chronicler_core.config.models import ChroniclerConfig
 from chronicler_core.vcs.base import VCSProvider
 from chronicler_core.vcs.models import CrawlResult, FileNode, RepoMetadata
 from chronicler_core.llm.base import LLMProvider

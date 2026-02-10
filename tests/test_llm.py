@@ -4,7 +4,7 @@ import os
 import pytest
 from unittest.mock import patch, MagicMock
 
-from chronicler_core.config.models import LLMConfig as AppLLMConfig
+from chronicler_core.config.models import LLMSettings as AppLLMSettings
 from chronicler_core.llm import create_llm_provider, LLMConfig, LLMResponse, TokenUsage
 from chronicler_core.llm.claude import ClaudeProvider
 from chronicler_core.llm.openai_adapter import OpenAIProvider
@@ -45,7 +45,7 @@ class TestLLMModels:
 class TestCreateLLMProvider:
     @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key-123"})
     def test_creates_claude_provider(self):
-        config = AppLLMConfig(
+        config = AppLLMSettings(
             provider="anthropic",
             model="claude-sonnet-4-20250514",
             api_key_env="ANTHROPIC_API_KEY",
@@ -55,7 +55,7 @@ class TestCreateLLMProvider:
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test"})
     def test_creates_openai_provider(self):
-        config = AppLLMConfig(
+        config = AppLLMSettings(
             provider="openai",
             model="gpt-4",
             api_key_env="OPENAI_API_KEY",
@@ -64,7 +64,7 @@ class TestCreateLLMProvider:
         assert isinstance(provider, OpenAIProvider)
 
     def test_unsupported_provider_raises(self):
-        config = AppLLMConfig(
+        config = AppLLMSettings(
             provider="anthropic",
             model="test",
             api_key_env="SOME_KEY",
@@ -76,7 +76,7 @@ class TestCreateLLMProvider:
 
     @patch.dict(os.environ, {}, clear=True)
     def test_missing_api_key_raises(self):
-        config = AppLLMConfig(
+        config = AppLLMSettings(
             provider="anthropic",
             model="test",
             api_key_env="NONEXISTENT_KEY_VAR",
@@ -88,7 +88,7 @@ class TestCreateLLMProvider:
 
     @patch.dict(os.environ, {"MY_KEY": "abc"})
     def test_custom_api_key_env(self):
-        config = AppLLMConfig(
+        config = AppLLMSettings(
             provider="anthropic",
             model="test",
             api_key_env="MY_KEY",
@@ -98,7 +98,7 @@ class TestCreateLLMProvider:
 
     @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "key123"})
     def test_provider_config_has_correct_model(self):
-        config = AppLLMConfig(
+        config = AppLLMSettings(
             provider="anthropic",
             model="claude-opus-4-20250514",
             api_key_env="ANTHROPIC_API_KEY",
@@ -108,7 +108,7 @@ class TestCreateLLMProvider:
 
     @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "key123"})
     def test_provider_config_max_tokens(self):
-        config = AppLLMConfig(
+        config = AppLLMSettings(
             provider="anthropic",
             model="test",
             api_key_env="ANTHROPIC_API_KEY",
