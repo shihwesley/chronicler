@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 
-from openai import AsyncOpenAI
+from openai import APIError, AsyncOpenAI, RateLimitError
 
 from chronicler_core.llm.base import LLMProvider
-from chronicler_core.llm.models import LLMConfig, LLMResponse, TokenUsage
+from chronicler_core.llm.models import LLMConfig, LLMError, LLMResponse, TokenUsage
 
 
 class OpenAIProvider(LLMProvider):
@@ -26,28 +26,33 @@ class OpenAIProvider(LLMProvider):
         user: str,
         max_tokens: int = 4096,
     ) -> LLMResponse:
-        response = await self._client.chat.completions.create(
-            model=self.config.model,
-            max_tokens=max_tokens,
-            temperature=self.config.temperature,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
-        )
-        if not response.choices:
-            raise ValueError("No choices in OpenAI response")
-        choice = response.choices[0]
-        if not response.usage:
-            raise ValueError("No usage data in OpenAI response")
-        return LLMResponse(
-            content=choice.message.content or "",
-            usage=TokenUsage(
-                input_tokens=response.usage.prompt_tokens,
-                output_tokens=response.usage.completion_tokens,
-            ),
-            model=response.model,
-        )
+        try:
+            response = await self._client.chat.completions.create(
+                model=self.config.model,
+                max_tokens=max_tokens,
+                temperature=self.config.temperature,
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+            )
+            if not response.choices:
+                raise ValueError("No choices in OpenAI response")
+            choice = response.choices[0]
+            if not response.usage:
+                raise ValueError("No usage data in OpenAI response")
+            return LLMResponse(
+                content=choice.message.content or "",
+                usage=TokenUsage(
+                    input_tokens=response.usage.prompt_tokens,
+                    output_tokens=response.usage.completion_tokens,
+                ),
+                model=response.model,
+            )
+        except APIError as e:
+            raise LLMError(
+                "openai", "generate", e, retryable=isinstance(e, RateLimitError)
+            ) from e
 
     async def generate_stream(
         self,
@@ -55,19 +60,24 @@ class OpenAIProvider(LLMProvider):
         user: str,
         max_tokens: int = 4096,
     ) -> AsyncIterator[str]:
-        stream = await self._client.chat.completions.create(
-            model=self.config.model,
-            max_tokens=max_tokens,
-            temperature=self.config.temperature,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
-            stream=True,
-        )
-        async for chunk in stream:
-            if not chunk.choices:
-                continue
-            delta = chunk.choices[0].delta
-            if delta.content:
-                yield delta.content
+        try:
+            stream = await self._client.chat.completions.create(
+                model=self.config.model,
+                max_tokens=max_tokens,
+                temperature=self.config.temperature,
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+                stream=True,
+            )
+            async for chunk in stream:
+                if not chunk.choices:
+                    continue
+                delta = chunk.choices[0].delta
+                if delta.content:
+                    yield delta.content
+        except APIError as e:
+            raise LLMError(
+                "openai", "generate_stream", e, retryable=isinstance(e, RateLimitError)
+            ) from e

@@ -6,7 +6,7 @@ from chronicler_core.config.models import LLMConfig as AppLLMConfig
 from chronicler_core.llm.base import LLMProvider
 from chronicler_core.llm.claude import ClaudeProvider
 from chronicler_core.llm.gemini import GeminiProvider
-from chronicler_core.llm.models import LLMConfig, LLMResponse, TokenUsage
+from chronicler_core.llm.models import LLMConfig, LLMError, LLMResponse, TokenUsage
 from chronicler_core.llm.ollama import OllamaProvider
 from chronicler_core.llm.openai_adapter import OpenAIProvider
 
@@ -66,6 +66,7 @@ __all__ = [
     "ClaudeProvider",
     "GeminiProvider",
     "LLMConfig",
+    "LLMError",
     "LLMProvider",
     "LLMResponse",
     "OllamaProvider",

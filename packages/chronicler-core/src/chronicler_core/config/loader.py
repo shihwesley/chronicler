@@ -36,9 +36,21 @@ def load_config(cli_path: str | None = None) -> ChroniclerConfig:
 
 
 def _expand_env_vars(obj: object) -> object:
-    """Recursively expand ${VAR} references in strings."""
+    """Recursively expand ${VAR} references in strings.
+
+    Raises ValueError if a referenced env var does not exist.
+    """
     if isinstance(obj, str):
-        return re.sub(r"\$\{(\w+)\}", lambda m: os.environ.get(m.group(1), ""), obj)
+        def _replace(match: re.Match[str]) -> str:
+            var_name = match.group(1)
+            value = os.environ.get(var_name)
+            if value is None:
+                raise ValueError(
+                    f"Environment variable ${{{var_name}}} is referenced but not set"
+                )
+            return value
+
+        return re.sub(r"\$\{(\w+)\}", _replace, obj)
     elif isinstance(obj, dict):
         return {k: _expand_env_vars(v) for k, v in obj.items()}
     elif isinstance(obj, list):

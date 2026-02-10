@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import importlib.metadata
+import logging
 from typing import TYPE_CHECKING
 
 from chronicler_core.interfaces.graph import GraphPlugin
 from chronicler_core.interfaces.queue import QueuePlugin
 from chronicler_core.interfaces.rbac import RBACPlugin
 from chronicler_core.interfaces.storage import StoragePlugin
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from chronicler_core.config.models import ChroniclerConfig
@@ -77,7 +80,13 @@ class PluginLoader:
         try:
             module = __import__(module_path, fromlist=[class_name])
             return getattr(module, class_name)
-        except (ImportError, AttributeError):
+        except (ImportError, AttributeError) as e:
+            logger.warning(
+                "Failed to import Lite default %s.%s: %s",
+                module_path,
+                class_name,
+                e,
+            )
             return None
 
     def _load_plugin(self, plugin_type: str, name: str | None) -> object | None:

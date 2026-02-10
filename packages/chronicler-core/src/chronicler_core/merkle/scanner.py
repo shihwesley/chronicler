@@ -206,7 +206,22 @@ class MercatorScanner:
     def _fallback_diff(self, root: Path, manifest_path: Path) -> DiffResult:
         """Compare a fresh scan against the file hashes in a manifest."""
         current = self._fallback_scan(root)
-        old_data = json.loads(manifest_path.read_text())
+
+        try:
+            old_data = json.loads(manifest_path.read_text())
+        except (json.JSONDecodeError, OSError) as e:
+            logger.warning(
+                "Failed to parse manifest %s: %s — treating as empty",
+                manifest_path,
+                e,
+            )
+            # Treat as empty manifest — all current files are "added"
+            return DiffResult(
+                changed=[],
+                added=sorted(current.files.keys()),
+                removed=[],
+                has_changes=bool(current.files),
+            )
 
         # Extract old file hashes (support both flat dict and files-list formats)
         old_files: dict[str, str] = {}

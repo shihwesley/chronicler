@@ -16,6 +16,9 @@ logger = logging.getLogger(__name__)
 # Directories and patterns to ignore when watching
 _IGNORE_PARTS = {".git", "node_modules", "__pycache__", ".chronicler"}
 
+# Maximum number of stale paths to track (prevents unbounded memory growth)
+_MAX_STALE = 10_000
+
 
 def _should_ignore(path: str) -> bool:
     """Return True if the path contains any ignored directory component."""
@@ -54,6 +57,9 @@ class _DebouncedHandler(FileSystemEventHandler):
         self._last_event[src] = now
 
         with self._lock:
+            if len(self._stale_paths) >= _MAX_STALE:
+                # Drop arbitrary element to prevent unbounded growth
+                self._stale_paths.pop()
             self._stale_paths.add(src)
 
         if self._callback is not None:
