@@ -18,8 +18,8 @@
 | packaging-spec | 1 | 1 | completed | 2026-02-10 |
 | llm-adapters-spec | 1 | 2 | completed | 2026-02-10 |
 | freshness-spec | 1 | 2 | completed | 2026-02-10 |
-| hooks-skill-spec | 2 | 1 | draft | 2026-02-10 |
-| vscode-spec | 2 | 2 | draft | 2026-02-10 |
+| hooks-skill-spec | 2 | 1 | completed | 2026-02-10 |
+| vscode-spec | 2 | 2 | completed | 2026-02-10 |
 | obsidian-spec | 2 | 2 | draft | 2026-02-10 |
 
 ### Phase 1, Sprint 1: packaging-spec
@@ -65,6 +65,23 @@
 ### Phase 1 Combined Results
 - **Total tests:** 455 passed, 2 skipped, 0 failures
 - **Full suite runtime:** 2.63s
+
+### Phase 2, Sprint 2: vscode-spec
+- **Status:** completed
+- **Started:** 2026-02-10
+- Actions taken:
+  - Recovered 18 salvaged TypeScript files from prior orphaned worktree
+  - Built full VS Code extension (23 files, 2993 lines)
+  - Core: parser, link-resolver, workspace, graph, types (platform-agnostic)
+  - Providers: DocumentLink, Definition, Reference, Hover, Completion, Diagnostics
+  - Panels: D3.js graph (WebView), Connections/Backlinks (TreeView), Tags (TreeView)
+  - Services: Python bridge, file watcher, config, GraphQL client
+  - Added status bar with stale count + debounced updates
+  - Added Init/Regenerate/Status commands via Python subprocess bridge
+  - Code review fixes: stderr capture, ReDoS guard, timer leak, disposal guard
+- **Tests:** 33 passed (vitest, 180ms)
+- **Build:** Clean compilation (tsc)
+- **Commit:** 9e3af72 (merged)
 
 ## 5-Question Reboot Check
 | Question | Answer |
