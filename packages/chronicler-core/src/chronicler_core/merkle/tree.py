@@ -5,9 +5,8 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from collections import defaultdict
 from dataclasses import replace
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 
 from chronicler_core.merkle.models import MerkleDiff, MerkleNode
@@ -107,155 +106,37 @@ class MerkleTree:
     ) -> MerkleTree:
         """Walk *root_path* and construct a full Merkle tree.
 
-        Files matching *ignore_patterns* (and the built-in defaults) are
-        skipped. For each source file we also search for a paired
-        ``.tech.md`` inside *doc_dir*.
+        Delegates to :class:`~chronicler_core.merkle.builder.MerkleTreeBuilder`.
         """
-        root_path = root_path.resolve()
-        ignore = set(DEFAULT_IGNORE)
-        if ignore_patterns:
-            ignore.update(ignore_patterns)
+        from chronicler_core.merkle.builder import MerkleTreeBuilder
 
-        nodes: dict[str, MerkleNode] = {}
-        # dir_path -> list of child relative paths
-        children_map: dict[str, list[str]] = defaultdict(list)
-
-        # Collect all source files
-        all_files: list[Path] = []
-        for p in sorted(root_path.rglob("*")):
-            if _matches_any(p.relative_to(root_path), ignore):
-                continue
-            if p.is_file():
-                all_files.append(p)
-
-        for fpath in all_files:
-            rel = str(fpath.relative_to(root_path))
-            source_hash = compute_file_hash(fpath)
-
-            # Look for a paired doc
-            doc_path_obj = _find_doc_for_source(rel, doc_dir, root_path)
-            doc_hash: str | None = None
-            doc_path: str | None = None
-            if doc_path_obj is not None:
-                doc_hash = compute_file_hash(doc_path_obj)
-                doc_path = str(doc_path_obj.relative_to(root_path))
-
-            node = MerkleNode(
-                path=rel,
-                hash=source_hash,
-                source_hash=source_hash,
-                doc_hash=doc_hash,
-                doc_path=doc_path,
-            )
-            nodes[rel] = node
-
-            # Register file as direct child of its parent, and ensure
-            # all ancestor directories are linked to each other so that
-            # intermediate dirs (e.g. a/b with only subdirs) get nodes.
-            parent = str(fpath.parent.relative_to(root_path))
-            if parent == ".":
-                parent = ""
-            children_map[parent].append(rel)
-
-            # Walk up the ancestor chain, registering each dir as a
-            # child of its own parent (duplicates are fine, we dedupe later).
-            cur = parent
-            while cur:
-                if "/" in cur:
-                    ancestor = cur.rsplit("/", 1)[0]
-                else:
-                    ancestor = ""
-                children_map[ancestor].append(cur)
-                cur = ancestor if ancestor != cur else ""
-                if not cur:
-                    break
-
-        # Deduplicate children lists
-        for key in children_map:
-            children_map[key] = list(dict.fromkeys(children_map[key]))
-
-        # Build directory nodes bottom-up (deepest paths first).
-        # Use len(parts) so that "src" (depth 1) sorts before "" (depth 0).
-        def _depth(d: str) -> int:
-            return len(d.split("/")) if d else 0
-
-        dir_keys = sorted(children_map.keys(), key=_depth, reverse=True)
-        for dpath in dir_keys:
-            child_paths = children_map[dpath]
-            child_hashes = [nodes[c].hash for c in sorted(child_paths)]
-            dir_hash = compute_merkle_hash(child_hashes)
-            nodes[dpath] = MerkleNode(
-                path=dpath,
-                hash=dir_hash,
-                children=tuple(sorted(child_paths)),
-            )
-
-        root_hash = nodes[""].hash if "" in nodes else compute_hash(b"")
-
-        return cls(
-            root_hash=root_hash,
-            nodes=nodes,
-            last_scan=datetime.now(timezone.utc),
-            root_path=str(root_path),
-        )
+        return MerkleTreeBuilder.build(root_path, doc_dir, ignore_patterns)
 
     # ------------------------------------------------------------------
     # Drift detection
     # ------------------------------------------------------------------
 
     def check_drift(self) -> list[MerkleNode]:
-        """Re-hash source files on disk; return nodes whose source changed."""
-        root = Path(self.root_path)
-        stale: list[MerkleNode] = []
-        for path, node in list(self.nodes.items()):
-            if node.source_hash is None:
-                continue  # directory node
-            fpath = root / node.path
-            if not fpath.is_file():
-                continue
-            current = compute_file_hash(fpath)
-            if current != node.source_hash:
-                updated = replace(node, stale=True)
-                self.nodes[path] = updated
-                stale.append(updated)
-        return stale
+        """Re-hash source files on disk; return nodes whose source changed.
+
+        Delegates to :class:`~chronicler_core.merkle.differ.MerkleTreeDiffer`.
+        """
+        from chronicler_core.merkle.differ import MerkleTreeDiffer
+
+        return MerkleTreeDiffer.check_drift(self)
 
     # ------------------------------------------------------------------
     # Diff
     # ------------------------------------------------------------------
 
     def diff(self, other: MerkleTree) -> MerkleDiff:
-        """Compare *self* (old) against *other* (new)."""
-        old_files = {
-            p for p, n in self.nodes.items() if n.source_hash is not None
-        }
-        new_files = {
-            p for p, n in other.nodes.items() if n.source_hash is not None
-        }
+        """Compare *self* (old) against *other* (new).
 
-        added = sorted(new_files - old_files)
-        removed = sorted(old_files - new_files)
-        changed: list[str] = []
-        stale_list: list[str] = []
+        Delegates to :class:`~chronicler_core.merkle.differ.MerkleTreeDiffer`.
+        """
+        from chronicler_core.merkle.differ import MerkleTreeDiffer
 
-        for p in sorted(old_files & new_files):
-            old_node = self.nodes[p]
-            new_node = other.nodes[p]
-            if old_node.source_hash != new_node.source_hash:
-                changed.append(p)
-                # Stale = source changed but doc stayed the same
-                if old_node.doc_hash == new_node.doc_hash:
-                    stale_list.append(p)
-
-        return MerkleDiff(
-            changed=tuple(changed),
-            added=tuple(added),
-            removed=tuple(removed),
-            stale=tuple(stale_list),
-            root_changed=self.root_hash != other.root_hash,
-            old_root_hash=self.root_hash,
-            new_root_hash=other.root_hash,
-        )
+        return MerkleTreeDiffer.diff(self, other)
 
     # ------------------------------------------------------------------
     # Mutation

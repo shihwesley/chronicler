@@ -1,5 +1,7 @@
 """Merkle tree subsystem for source/doc drift tracking."""
 
+from chronicler_core.merkle.builder import MerkleTreeBuilder
+from chronicler_core.merkle.differ import MerkleTreeDiffer
 from chronicler_core.merkle.models import MerkleDiff, MerkleNode
 from chronicler_core.merkle.scanner import DiffResult, MercatorScanner, ScanResult
 from chronicler_core.merkle.tree import (
@@ -26,6 +28,8 @@ __all__ = [
     "MerkleDiff",
     "MerkleNode",
     "MerkleTree",
+    "MerkleTreeBuilder",
+    "MerkleTreeDiffer",
     "ScanResult",
     "build_tree",
     "check_drift",
