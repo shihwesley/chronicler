@@ -4,10 +4,10 @@ import pytest
 import yaml
 from pathlib import Path
 
-from chronicler.config.models import OutputConfig
-from chronicler.drafter.models import TechDoc
-from chronicler.output.writer import TechMdWriter, _sanitize_component_id
-from chronicler.output.validator import (
+from chronicler_core.config.models import OutputConfig
+from chronicler_core.drafter.models import TechDoc
+from chronicler_core.output.writer import TechMdWriter, _sanitize_component_id
+from chronicler_core.output.validator import (
     TechMdValidator,
     ValidationResult,
     _split_frontmatter,

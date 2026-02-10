@@ -5,7 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 
-from chronicler.llm.models import LLMConfig, LLMResponse
+from chronicler_core.llm.models import LLMConfig, LLMResponse
 
 
 class LLMProvider(ABC):

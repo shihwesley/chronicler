@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import yaml
 
-from chronicler.config import ChroniclerConfig
-from chronicler.drafter.context import ContextBuilder
-from chronicler.drafter.frontmatter import generate_frontmatter
-from chronicler.drafter.graph import generate_connectivity_graph
-from chronicler.drafter.models import PromptContext, TechDoc
-from chronicler.drafter.sections import draft_architectural_intent
-from chronicler.llm.base import LLMProvider
-from chronicler.vcs.models import CrawlResult
+from chronicler_core.config import ChroniclerConfig
+from chronicler_core.drafter.context import ContextBuilder
+from chronicler_core.drafter.frontmatter import generate_frontmatter
+from chronicler_core.drafter.graph import generate_connectivity_graph
+from chronicler_core.drafter.models import PromptContext, TechDoc
+from chronicler_core.drafter.sections import draft_architectural_intent
+from chronicler_core.llm.base import LLMProvider
+from chronicler_core.vcs.models import CrawlResult
 
 
 class Drafter:

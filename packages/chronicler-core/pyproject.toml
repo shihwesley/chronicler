@@ -1,0 +1,18 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "chronicler-core"
+version = "0.1.0"
+description = "Core library for Chronicler - VCS crawling, LLM drafting, and document generation"
+requires-python = ">=3.11"
+dependencies = [
+    "pygithub",
+    "anthropic",
+    "openai",
+    "google-generativeai",
+    "pydantic>=2.0.0",
+    "pyyaml",
+    "markitdown[pdf,docx,pptx]",
+]

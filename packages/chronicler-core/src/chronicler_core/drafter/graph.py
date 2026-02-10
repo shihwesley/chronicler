@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import re
 
-from chronicler.vcs.models import FileNode, RepoMetadata
+from chronicler_core.vcs.models import FileNode, RepoMetadata
 
 # Infrastructure patterns matched against Dockerfile content (case-insensitive)
 _INFRA_PATTERNS: list[tuple[str, str, str, str]] = [

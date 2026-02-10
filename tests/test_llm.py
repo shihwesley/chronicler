@@ -4,10 +4,10 @@ import os
 import pytest
 from unittest.mock import patch, MagicMock
 
-from chronicler.config.models import LLMConfig as AppLLMConfig
-from chronicler.llm import create_llm_provider, LLMConfig, LLMResponse, TokenUsage
-from chronicler.llm.claude import ClaudeProvider
-from chronicler.llm.openai_adapter import OpenAIProvider
+from chronicler_core.config.models import LLMConfig as AppLLMConfig
+from chronicler_core.llm import create_llm_provider, LLMConfig, LLMResponse, TokenUsage
+from chronicler_core.llm.claude import ClaudeProvider
+from chronicler_core.llm.openai_adapter import OpenAIProvider
 
 
 # ---------------------------------------------------------------------------

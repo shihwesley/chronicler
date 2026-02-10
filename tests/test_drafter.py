@@ -3,18 +3,18 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from chronicler.drafter.context import ContextBuilder
-from chronicler.drafter.drafter import Drafter, _assemble_tech_md
-from chronicler.drafter.frontmatter import generate_frontmatter, _infer_layer, _parse_owner
-from chronicler.drafter.graph import (
+from chronicler_core.drafter.context import ContextBuilder
+from chronicler_core.drafter.drafter import Drafter, _assemble_tech_md
+from chronicler_core.drafter.frontmatter import generate_frontmatter, _infer_layer, _parse_owner
+from chronicler_core.drafter.graph import (
     generate_connectivity_graph,
     _sanitize_node_id,
     _detect_infrastructure,
 )
-from chronicler.drafter.models import PromptContext, TechDoc
-from chronicler.drafter.prompts import PromptTemplate
-from chronicler.drafter.sections import draft_architectural_intent
-from chronicler.vcs.models import CrawlResult, FileNode, RepoMetadata
+from chronicler_core.drafter.models import PromptContext, TechDoc
+from chronicler_core.drafter.prompts import PromptTemplate
+from chronicler_core.drafter.sections import draft_architectural_intent
+from chronicler_core.vcs.models import CrawlResult, FileNode, RepoMetadata
 
 
 # ---------------------------------------------------------------------------

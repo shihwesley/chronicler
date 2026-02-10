@@ -1,6 +1,6 @@
 [build-system]
 requires = ["hatchling"]
-build-backend = "hatchling.backends.build"
+build-backend = "hatchling.build"
 
 [project]
 name = "chronicler"
@@ -8,15 +8,9 @@ version = "0.1.0"
 description = "Living Technical Ledger - automated .tech.md generation for enterprise codebases"
 requires-python = ">=3.11"
 dependencies = [
-    "pygithub",
-    "anthropic",
-    "openai",
-    "google-generativeai",
+    "chronicler-core",
     "typer",
     "rich",
-    "pydantic>=2.0.0",
-    "pyyaml",
-    "markitdown[pdf,docx,pptx]",
 ]
 
 [project.optional-dependencies]
@@ -28,6 +22,12 @@ dev = [
 
 [project.scripts]
 chronicler = "chronicler.cli:app"
+
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.uv.sources]
+chronicler-core = { workspace = true }
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

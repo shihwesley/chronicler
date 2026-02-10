@@ -3,11 +3,11 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from chronicler.config.models import ChroniclerConfig, VCSConfig
-from chronicler.vcs.base import VCSProvider
-from chronicler.vcs.models import CrawlResult, FileNode, RepoMetadata
-from chronicler.llm.base import LLMProvider
-from chronicler.llm.models import LLMConfig as LLMRuntimeConfig, LLMResponse, TokenUsage
+from chronicler_core.config.models import ChroniclerConfig, VCSConfig
+from chronicler_core.vcs.base import VCSProvider
+from chronicler_core.vcs.models import CrawlResult, FileNode, RepoMetadata
+from chronicler_core.llm.base import LLMProvider
+from chronicler_core.llm.models import LLMConfig as LLMRuntimeConfig, LLMResponse, TokenUsage
 
 
 @pytest.fixture

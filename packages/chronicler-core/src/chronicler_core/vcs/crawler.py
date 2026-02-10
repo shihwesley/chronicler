@@ -7,9 +7,9 @@ import logging
 
 from github import GithubException
 
-from chronicler.config.models import VCSConfig
-from chronicler.vcs.base import VCSProvider
-from chronicler.vcs.models import CrawlResult, FileNode
+from chronicler_core.config.models import VCSConfig
+from chronicler_core.vcs.base import VCSProvider
+from chronicler_core.vcs.models import CrawlResult, FileNode
 
 logger = logging.getLogger(__name__)
 

@@ -1,12 +1,12 @@
 """Document conversion subsystem — wraps MarkItDown with caching."""
 
-from chronicler.converter.converter import (
+from chronicler_core.converter.converter import (
     DOCUMENT_EXTENSIONS,
     IMAGE_EXTENSIONS,
     DocumentConverter,
     should_convert,
 )
-from chronicler.converter.models import ConversionResult
+from chronicler_core.converter.models import ConversionResult
 
 __all__ = [
     "ConversionResult",

@@ -4,15 +4,15 @@ import yaml
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from chronicler.config.models import ChroniclerConfig, OutputConfig, VCSConfig
-from chronicler.drafter.drafter import Drafter
-from chronicler.llm.base import LLMProvider
-from chronicler.llm.models import LLMConfig, LLMResponse, TokenUsage
-from chronicler.output.writer import TechMdWriter
-from chronicler.output.validator import TechMdValidator
-from chronicler.vcs.crawler import VCSCrawler
-from chronicler.vcs.base import VCSProvider
-from chronicler.vcs.models import CrawlResult, FileNode, RepoMetadata
+from chronicler_core.config.models import ChroniclerConfig, OutputConfig, VCSConfig
+from chronicler_core.drafter.drafter import Drafter
+from chronicler_core.llm.base import LLMProvider
+from chronicler_core.llm.models import LLMConfig, LLMResponse, TokenUsage
+from chronicler_core.output.writer import TechMdWriter
+from chronicler_core.output.validator import TechMdValidator
+from chronicler_core.vcs.crawler import VCSCrawler
+from chronicler_core.vcs.base import VCSProvider
+from chronicler_core.vcs.models import CrawlResult, FileNode, RepoMetadata
 
 
 @pytest.fixture

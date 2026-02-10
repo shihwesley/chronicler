@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from chronicler.drafter.models import PromptContext, TruncationConfig
+from chronicler_core.drafter.models import PromptContext, TruncationConfig
 
 SYSTEM_PROMPT = """\
 You are Chronicler, an enterprise technical documentation generator. Your task is to create a `.tech.md` file that serves as a "Living Technical Ledger" for the given codebase.

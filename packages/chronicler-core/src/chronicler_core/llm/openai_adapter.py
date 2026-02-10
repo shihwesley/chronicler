@@ -6,8 +6,8 @@ from collections.abc import AsyncIterator
 
 from openai import AsyncOpenAI
 
-from chronicler.llm.base import LLMProvider
-from chronicler.llm.models import LLMConfig, LLMResponse, TokenUsage
+from chronicler_core.llm.base import LLMProvider
+from chronicler_core.llm.models import LLMConfig, LLMResponse, TokenUsage
 
 
 class OpenAIProvider(LLMProvider):
