@@ -36,17 +36,17 @@ def main(tool_input_file: str) -> None:
         if "/.chronicler/" in file_path or file_path.startswith(".chronicler/"):
             return
 
-        # Find project root by walking up from the written file
+        # Resolve and validate path BEFORE any filesystem operations
         written_path = Path(file_path).resolve()
+
+        # Find project root by walking up from the written file
         candidates_file = _find_candidates_file(written_path)
         if candidates_file is None:
             return
 
         # Guard: ensure the written file is under the project root
         project_root = candidates_file.parent.parent  # .chronicler's parent
-        try:
-            written_path.relative_to(project_root)
-        except ValueError:
+        if not written_path.is_relative_to(project_root):
             return  # path outside project, ignore
 
         candidates_file.parent.mkdir(parents=True, exist_ok=True)

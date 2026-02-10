@@ -9,6 +9,16 @@ from pydantic import ValidationError
 
 from .models import ChroniclerConfig
 
+# Allowlist of environment variables permitted for ${VAR} expansion
+_ALLOWED_ENV_VARS = {
+    "ANTHROPIC_API_KEY",
+    "OPENAI_API_KEY",
+    "GOOGLE_API_KEY",
+    "GITHUB_TOKEN",
+    "OLLAMA_HOST",
+    "CHRONICLER_LOG_LEVEL",
+}
+
 
 def load_config(cli_path: str | None = None) -> ChroniclerConfig:
     """Load config with resolution order: CLI > project-local > user-global > defaults."""
@@ -36,9 +46,21 @@ def load_config(cli_path: str | None = None) -> ChroniclerConfig:
 
 
 def _expand_env_vars(obj: object) -> object:
-    """Recursively expand ${VAR} references in strings."""
+    """Recursively expand ${VAR} references in strings.
+
+    Only variables in _ALLOWED_ENV_VARS are expanded.
+    Raises ValueError if a disallowed variable is referenced.
+    """
     if isinstance(obj, str):
-        return re.sub(r"\$\{(\w+)\}", lambda m: os.environ.get(m.group(1), ""), obj)
+        def replacer(m):
+            var_name = m.group(1)
+            if var_name not in _ALLOWED_ENV_VARS:
+                raise ValueError(
+                    f"Env var ${{{var_name}}} not in allowlist. "
+                    f"Add to _ALLOWED_ENV_VARS or use direct value."
+                )
+            return os.environ.get(var_name, "")
+        return re.sub(r"\$\{(\w+)\}", replacer, obj)
     elif isinstance(obj, dict):
         return {k: _expand_env_vars(v) for k, v in obj.items()}
     elif isinstance(obj, list):

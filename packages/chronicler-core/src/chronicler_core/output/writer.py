@@ -53,6 +53,10 @@ class TechMdWriter:
         safe_name = _sanitize_component_id(tech_doc.component_id)
         dest = self.base_dir / f"{safe_name}.tech.md"
 
+        # Guard against path traversal escaping base_dir
+        if not dest.resolve().is_relative_to(self.base_dir.resolve()):
+            raise ValueError(f"Path escape detected: {tech_doc.component_id}")
+
         if dry_run:
             logger.debug("dry-run: would write %s", dest)
             return dest

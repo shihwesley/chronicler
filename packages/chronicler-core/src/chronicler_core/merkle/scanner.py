@@ -66,10 +66,16 @@ class MercatorScanner:
         # 1. Explicit config path
         if self.config.mercator_path:
             p = Path(self.config.mercator_path)
-            if p.is_file():
+            # Validate mercator_path is absolute, exists, and is a file
+            if not p.is_absolute():
+                logger.warning("mercator_path must be absolute: %s", p)
+            elif not p.exists():
+                logger.warning("mercator_path does not exist: %s", p)
+            elif p.is_dir():
+                logger.warning("mercator_path is a directory, not a file: %s", p)
+            elif p.is_file():
                 self._mercator_path = p
                 return p
-            logger.warning("Configured mercator_path %s does not exist", p)
 
         # 2. $CLAUDE_PLUGIN_ROOT
         plugin_root = os.environ.get("CLAUDE_PLUGIN_ROOT")

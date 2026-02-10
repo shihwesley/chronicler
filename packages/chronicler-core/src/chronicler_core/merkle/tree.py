@@ -61,13 +61,15 @@ def _find_doc_for_source(
 
     # Strategy 1: sibling doc directory
     sibling_doc = root / src.parent / doc_dir / f"{stem}.tech.md"
-    if sibling_doc.is_file():
+    # Guard against path traversal escaping root
+    if sibling_doc.resolve().is_relative_to(root.resolve()) and sibling_doc.is_file():
         return sibling_doc
 
     # Strategy 2: root doc directory with component_id naming
     component_id = re.sub(r"[/\\]", "-", str(src.with_suffix("")))
     root_doc = root / doc_dir / f"{component_id}.tech.md"
-    if root_doc.is_file():
+    # Guard against path traversal escaping root
+    if root_doc.resolve().is_relative_to(root.resolve()) and root_doc.is_file():
         return root_doc
 
     return None

@@ -3,14 +3,45 @@
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import AsyncIterator
+from urllib.parse import urlparse
 
 import httpx
 
 from chronicler_core.llm.base import LLMProvider
 from chronicler_core.llm.models import LLMConfig, LLMResponse, TokenUsage
 
+logger = logging.getLogger(__name__)
+
 _DEFAULT_BASE_URL = "http://localhost:11434"
+
+
+def _validate_base_url(url: str) -> str:
+    """Validate Ollama base_url for SSRF and injection risks.
+
+    Raises ValueError if the URL is malformed or contains injection patterns.
+    Warns if the URL is not localhost (remote Ollama is valid but uncommon).
+    """
+    parsed = urlparse(url)
+
+    # Check scheme
+    if parsed.scheme not in ("http", "https"):
+        raise ValueError(f"Ollama base_url must be http(s), got {parsed.scheme}")
+
+    # Detect CRLF injection attempts
+    if "\r" in url or "\n" in url:
+        raise ValueError("CRLF injection detected in base_url")
+
+    # Warn on non-localhost (but allow it — remote Ollama is valid)
+    allowed_hosts = {"localhost", "127.0.0.1", "::1", "0.0.0.0"}
+    if parsed.hostname not in allowed_hosts:
+        logger.warning(
+            "Ollama base_url %s is not localhost — ensure this is intentional",
+            parsed.hostname
+        )
+
+    return url
 
 
 class OllamaProvider(LLMProvider):
@@ -18,7 +49,8 @@ class OllamaProvider(LLMProvider):
 
     def __init__(self, config: LLMConfig) -> None:
         super().__init__(config)
-        self._base_url = (config.base_url or _DEFAULT_BASE_URL).rstrip("/")
+        raw_url = (config.base_url or _DEFAULT_BASE_URL).rstrip("/")
+        self._base_url = _validate_base_url(raw_url)
 
     async def generate(
         self,
