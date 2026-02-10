@@ -1,0 +1,174 @@
+{
+  "name": "chronicler-vscode",
+  "displayName": "Chronicler",
+  "description": "Navigate .tech.md technical documentation with clickable links, graph view, and backlinks",
+  "version": "0.1.0",
+  "publisher": "chronicler",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "workspaceContains:**/*.tech.md"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "chronicler.showGraph",
+        "title": "Chronicler: Show Dependency Graph"
+      },
+      {
+        "command": "chronicler.refreshGraph",
+        "title": "Chronicler: Refresh Graph"
+      },
+      {
+        "command": "chronicler.createTechMd",
+        "title": "Chronicler: Create .tech.md"
+      },
+      {
+        "command": "chronicler.init",
+        "title": "Chronicler: Init"
+      },
+      {
+        "command": "chronicler.regenerate",
+        "title": "Chronicler: Regenerate Stale"
+      },
+      {
+        "command": "chronicler.status",
+        "title": "Chronicler: Show Status"
+      }
+    ],
+    "configuration": {
+      "title": "Chronicler",
+      "properties": {
+        "chronicler.techMdGlob": {
+          "type": "string",
+          "default": "**/.chronicler/**/*.tech.md",
+          "description": "Glob pattern for finding .tech.md files"
+        },
+        "chronicler.linkResolution": {
+          "type": "string",
+          "enum": [
+            "local",
+            "hybrid"
+          ],
+          "default": "hybrid",
+          "description": "Link resolution strategy (local-only or hybrid with GraphQL fallback)"
+        },
+        "chronicler.graphql.endpoint": {
+          "type": "string",
+          "default": "",
+          "description": "GraphQL endpoint for cross-repo link resolution (enterprise)"
+        },
+        "chronicler.graphql.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API key for GraphQL endpoint"
+        },
+        "chronicler.graph.layout": {
+          "type": "string",
+          "enum": [
+            "force-directed",
+            "hierarchical"
+          ],
+          "default": "force-directed",
+          "description": "Graph layout algorithm"
+        },
+        "chronicler.graph.colorBy": {
+          "type": "string",
+          "enum": [
+            "layer",
+            "owner_team",
+            "security_level"
+          ],
+          "default": "layer",
+          "description": "Node color scheme"
+        },
+        "chronicler.graph.groupBy": {
+          "type": "string",
+          "enum": [
+            "none",
+            "owner_team",
+            "layer"
+          ],
+          "default": "owner_team",
+          "description": "Node grouping"
+        },
+        "chronicler.hover.maxLines": {
+          "type": "number",
+          "default": 10,
+          "description": "Max preview lines in hover"
+        },
+        "chronicler.diagnostics.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable broken link diagnostics"
+        },
+        "chronicler.wikiLinks.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable [[wiki-link]] support"
+        },
+        "chronicler.agentUri.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable agent:// URI support"
+        },
+        "chronicler.pythonPath": {
+          "type": "string",
+          "default": "python3",
+          "description": "Path to Python interpreter with chronicler-lite installed"
+        }
+      }
+    },
+    "views": {
+      "explorer": [
+        {
+          "id": "chroniclerConnections",
+          "name": "Connections",
+          "when": "chronicler.hasWorkspace"
+        },
+        {
+          "id": "chroniclerTags",
+          "name": "Tags",
+          "when": "chronicler.hasWorkspace"
+        }
+      ]
+    },
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "chronicler.showGraph",
+          "when": "chronicler.hasWorkspace"
+        },
+        {
+          "command": "chronicler.refreshGraph",
+          "when": "chronicler.hasWorkspace"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "test:unit": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/test-electron": "^2.3.0",
+    "typescript": "^5.4.0",
+    "vitest": "^4.0.18"
+  },
+  "dependencies": {
+    "d3": "^7.9.0",
+    "yaml": "^2.4.0"
+  }
+}
