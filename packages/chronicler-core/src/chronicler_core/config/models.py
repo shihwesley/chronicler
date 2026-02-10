@@ -66,6 +66,13 @@ class DocumentConversionConfig(BaseModel):
     cache: DocCacheConfig = Field(default_factory=DocCacheConfig)
 
 
+class PluginsConfig(BaseModel):
+    queue: str | None = None
+    graph: str | None = None
+    rbac: str | None = None
+    storage: str | None = None
+
+
 class ChroniclerConfig(BaseModel):
     llm: LLMConfig = Field(default_factory=LLMConfig)
     queue: QueueConfig = Field(default_factory=QueueConfig)
@@ -73,5 +80,6 @@ class ChroniclerConfig(BaseModel):
     output: OutputConfig = Field(default_factory=OutputConfig)
     monorepo: MonorepoConfig = Field(default_factory=MonorepoConfig)
     document_conversion: DocumentConversionConfig = Field(default_factory=DocumentConversionConfig)
+    plugins: PluginsConfig = Field(default_factory=PluginsConfig)
     log_level: Literal["debug", "info", "warn", "error"] = "info"
     log_format: Literal["text", "json"] = "text"
