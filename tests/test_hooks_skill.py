@@ -340,14 +340,25 @@ class TestHookErrorPaths:
         main(str(tool_input_file))
         # No exception = success
 
-    def test_post_write_io_error_exits_zero(self, project):
+    def test_post_write_io_error_exits_zero(self, project, tool_input_file):
         """I/O errors during candidate file write should exit 0 (REQ-5)."""
         from chronicler_lite.hooks.post_write import main
 
-        # Create a scenario where writing will fail (read-only parent dir)
-        with patch("pathlib.Path.resolve", side_effect=OSError("disk full")):
+        # Create a valid input file
+        src = project / "test.py"
+        src.write_text("x = 1")
+        tool_input_file.write_text(json.dumps({"file_path": str(src)}))
+
+        # Patch open() to raise OSError when writing to .stale-candidates
+        original_open = open
+        def failing_open(path, *args, **kwargs):
+            if ".stale-candidates" in str(path):
+                raise OSError("disk full")
+            return original_open(path, *args, **kwargs)
+
+        with patch("builtins.open", failing_open):
             with pytest.raises(SystemExit) as exc_info:
-                main(str(project / "input.json"))
+                main(str(tool_input_file))
             assert exc_info.value.code == 0
 
     def test_pre_read_techmd_malformed_json_exits_zero(self, tool_input_file):
@@ -366,14 +377,12 @@ class TestHookErrorPaths:
         (project / ".chronicler" / "merkle-tree.json").write_text("{}")
         tool_input_file.write_text(json.dumps({"file_path": str(doc)}))
 
-        # Mock the import to fail
-        with patch("chronicler_lite.hooks.pre_read_techmd.main.__code__") as mock_code:
+        # Patch MerkleTree.load to raise ImportError
+        with patch("chronicler_core.merkle.tree.MerkleTree.load", side_effect=ImportError("no module")):
             from chronicler_lite.hooks.pre_read_techmd import main
-            with patch("builtins.__import__", side_effect=ImportError("no chronicler_core")):
-                # This will trigger the exception handler
-                with pytest.raises(SystemExit) as exc_info:
-                    exec("from chronicler_core.merkle.tree import MerkleTree")
-                assert exc_info.value.code is None or exc_info.value.code == 0
+            with pytest.raises(SystemExit) as exc_info:
+                main(str(tool_input_file))
+            assert exc_info.value.code == 0
 
     def test_pre_read_techmd_merkle_load_error_exits_zero(self, project, tool_input_file):
         """Errors loading merkle tree should exit 0 (REQ-5)."""
@@ -414,19 +423,32 @@ class TestHookErrorPaths:
                 main(str(tmp_path))
             assert exc_info.value.code == 0
 
-    def test_all_hooks_log_warnings_on_error(self, capsys, caplog):
+    def test_all_hooks_log_warnings_on_error(self, project, tool_input_file, caplog):
         """All hooks should log warnings when they fail (REQ-2)."""
         import logging
 
         # Test post_write
         from chronicler_lite.hooks.post_write import main as post_write_main
+
+        # Create a valid input but make open() fail
+        src = project / "test.py"
+        src.write_text("x = 1")
+        tool_input_file.write_text(json.dumps({"file_path": str(src)}))
+
+        original_open = open
+        def failing_open(path, *args, **kwargs):
+            if ".stale-candidates" in str(path):
+                raise RuntimeError("test error")
+            return original_open(path, *args, **kwargs)
+
         with caplog.at_level(logging.WARNING):
-            with patch("pathlib.Path.resolve", side_effect=RuntimeError("test error")):
+            with patch("builtins.open", failing_open):
                 try:
-                    post_write_main("/fake/path")
+                    post_write_main(str(tool_input_file))
                 except SystemExit:
                     pass
-        # Check that warning was logged
+
+        # Check that warning was logged (actual message is "chronicler post_write hook failed")
         assert any("post_write hook failed" in record.message for record in caplog.records)
 
 

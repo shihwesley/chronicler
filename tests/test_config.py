@@ -152,28 +152,40 @@ class TestDocumentConversionConfig:
 
 class TestExpandEnvVars:
     def test_expands_string_variable(self):
-        with patch.dict(os.environ, {"MY_KEY": "secret123"}):
-            assert _expand_env_vars("${MY_KEY}") == "secret123"
+        from chronicler_core.config.loader import _ALLOWED_ENV_VARS
+        with patch("chronicler_core.config.loader._ALLOWED_ENV_VARS", _ALLOWED_ENV_VARS | {"MY_KEY"}):
+            with patch.dict(os.environ, {"MY_KEY": "secret123"}):
+                assert _expand_env_vars("${MY_KEY}") == "secret123"
 
     def test_missing_var_becomes_empty(self):
-        # Make sure the var doesn't exist
-        os.environ.pop("NONEXISTENT_VAR", None)
-        assert _expand_env_vars("${NONEXISTENT_VAR}") == ""
+        # Use an allowlisted var that's not set
+        os.environ.pop("ANTHROPIC_API_KEY", None)
+        # Now it should raise because it's not set (not because it's not in allowlist)
+        # Old behavior: returned "". New behavior: raises ValueError
+        # Update test to match new stricter behavior
+        with pytest.raises(ValueError, match="not set"):
+            _expand_env_vars("${ANTHROPIC_API_KEY}")
 
     def test_expands_in_dict(self):
-        with patch.dict(os.environ, {"TOKEN": "abc"}):
-            result = _expand_env_vars({"key": "${TOKEN}"})
-            assert result == {"key": "abc"}
+        from chronicler_core.config.loader import _ALLOWED_ENV_VARS
+        with patch("chronicler_core.config.loader._ALLOWED_ENV_VARS", _ALLOWED_ENV_VARS | {"TOKEN"}):
+            with patch.dict(os.environ, {"TOKEN": "abc"}):
+                result = _expand_env_vars({"key": "${TOKEN}"})
+                assert result == {"key": "abc"}
 
     def test_expands_in_list(self):
-        with patch.dict(os.environ, {"X": "1"}):
-            result = _expand_env_vars(["${X}", "literal"])
-            assert result == ["1", "literal"]
+        from chronicler_core.config.loader import _ALLOWED_ENV_VARS
+        with patch("chronicler_core.config.loader._ALLOWED_ENV_VARS", _ALLOWED_ENV_VARS | {"X"}):
+            with patch.dict(os.environ, {"X": "1"}):
+                result = _expand_env_vars(["${X}", "literal"])
+                assert result == ["1", "literal"]
 
     def test_expands_nested_structures(self):
-        with patch.dict(os.environ, {"A": "alpha", "B": "beta"}):
-            result = _expand_env_vars({"outer": {"inner": "${A}"}, "list": ["${B}"]})
-            assert result == {"outer": {"inner": "alpha"}, "list": ["beta"]}
+        from chronicler_core.config.loader import _ALLOWED_ENV_VARS
+        with patch("chronicler_core.config.loader._ALLOWED_ENV_VARS", _ALLOWED_ENV_VARS | {"A", "B"}):
+            with patch.dict(os.environ, {"A": "alpha", "B": "beta"}):
+                result = _expand_env_vars({"outer": {"inner": "${A}"}, "list": ["${B}"]})
+                assert result == {"outer": {"inner": "alpha"}, "list": ["beta"]}
 
     def test_non_string_passthrough(self):
         assert _expand_env_vars(42) == 42
@@ -181,8 +193,10 @@ class TestExpandEnvVars:
         assert _expand_env_vars(None) is None
 
     def test_mixed_text_and_var(self):
-        with patch.dict(os.environ, {"HOST": "localhost"}):
-            assert _expand_env_vars("http://${HOST}:8080") == "http://localhost:8080"
+        from chronicler_core.config.loader import _ALLOWED_ENV_VARS
+        with patch("chronicler_core.config.loader._ALLOWED_ENV_VARS", _ALLOWED_ENV_VARS | {"HOST"}):
+            with patch.dict(os.environ, {"HOST": "localhost"}):
+                assert _expand_env_vars("http://${HOST}:8080") == "http://localhost:8080"
 
 
 # ── load_config ─────────────────────────────────────────────────────
@@ -251,14 +265,16 @@ class TestLoadConfig:
         assert config.log_level == "debug"
 
     def test_env_vars_expanded_in_loaded_config(self, tmp_path, monkeypatch):
+        from chronicler_core.config.loader import _ALLOWED_ENV_VARS
         monkeypatch.chdir(tmp_path)
         monkeypatch.setenv("MY_MODEL", "gpt-4-turbo")
         yaml_file = tmp_path / "chronicler.yaml"
         yaml_file.write_text("llm:\n  provider: openai\n  model: ${MY_MODEL}\n")
         monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path / "fakehome")
 
-        config = load_config()
-        assert config.llm.model == "gpt-4-turbo"
+        with patch("chronicler_core.config.loader._ALLOWED_ENV_VARS", _ALLOWED_ENV_VARS | {"MY_MODEL"}):
+            config = load_config()
+            assert config.llm.model == "gpt-4-turbo"
 
     def test_empty_yaml_file_returns_defaults(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)

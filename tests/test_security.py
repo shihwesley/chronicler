@@ -26,43 +26,54 @@ from chronicler_core.output.writer import TechMdWriter
 
 def test_writer_path_traversal_blocked(tmp_path):
     """Test that path traversal attempts in component_id are blocked."""
+    from chronicler_core.output.writer import _sanitize_component_id
+
     config = OutputConfig(base_dir=str(tmp_path / "docs"))
     writer = TechMdWriter(config)
 
-    # Attempt to escape via ../ sequences
-    malicious_doc = TechDoc(
-        component_id="../../../etc/passwd",
-        raw_content="malicious content",
-        metadata={},
-    )
+    # Patch sanitizer to pass through the malicious input (testing the is_relative_to guard)
+    with patch("chronicler_core.output.writer._sanitize_component_id", return_value="../../../etc/passwd"):
+        malicious_doc = TechDoc(
+            component_id="../../../etc/passwd",
+            raw_content="malicious content",
+            metadata={},
+        )
 
-    with pytest.raises(ValueError, match="Path escape detected"):
-        writer.write(malicious_doc)
+        with pytest.raises(ValueError, match="Path escape detected"):
+            writer.write(malicious_doc)
 
 
 def test_writer_symlink_escape_blocked(tmp_path):
     """Test that symlinks can't be used to escape base_dir."""
     docs_dir = tmp_path / "docs"
     docs_dir.mkdir()
-    evil_dir = tmp_path / "evil"
-    evil_dir.mkdir()
-
-    # Create a symlink inside docs_dir pointing outside
-    symlink = docs_dir / "escape"
-    symlink.symlink_to(evil_dir)
+    outside_dir = tmp_path / "outside"
+    outside_dir.mkdir()
 
     config = OutputConfig(base_dir=str(docs_dir))
     writer = TechMdWriter(config)
 
-    # Attempt to write through the symlink
+    # Patch sanitizer to return a path that looks innocent but will resolve outside
+    # Also patch resolve() to simulate the symlink resolution
     doc = TechDoc(
         component_id="escape/payload",
         raw_content="test",
         metadata={},
     )
 
-    with pytest.raises(ValueError, match="Path escape detected"):
-        writer.write(doc)
+    outside_path = outside_dir / "evil.tech.md"
+    original_resolve = Path.resolve
+
+    def mock_resolve(self, *args, **kwargs):
+        # If this is the dest path being checked, return outside path
+        if self.name == "escape--payload.tech.md":
+            return outside_path
+        return original_resolve(self, *args, **kwargs)
+
+    with patch("chronicler_core.output.writer._sanitize_component_id", return_value="escape--payload"):
+        with patch.object(Path, "resolve", mock_resolve):
+            with pytest.raises(ValueError, match="Path escape detected"):
+                writer.write(doc)
 
 
 # -------------------------------------------------------------------------
@@ -97,16 +108,22 @@ def test_post_write_path_traversal_blocked(tmp_path):
 # -------------------------------------------------------------------------
 
 
-def test_scanner_rejects_relative_mercator_path(tmp_path):
+def test_scanner_rejects_relative_mercator_path(tmp_path, caplog):
     """Test that relative paths in mercator_path are rejected."""
     config = MerkleConfig(mercator_path="relative/path/to/script.py")
     scanner = MercatorScanner(config)
 
-    result = scanner.discover_mercator()
+    # Prevent fallback discovery from finding anything
+    with patch("pathlib.Path.glob", return_value=[]):
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("CLAUDE_PLUGIN_ROOT", None)
+            result = scanner.discover_mercator()
+
     assert result is None  # Should reject and return None
+    assert any("must be absolute" in rec.message for rec in caplog.records)
 
 
-def test_scanner_rejects_directory_mercator_path(tmp_path):
+def test_scanner_rejects_directory_mercator_path(tmp_path, caplog):
     """Test that directories in mercator_path are rejected."""
     some_dir = tmp_path / "some_dir"
     some_dir.mkdir()
@@ -114,7 +131,12 @@ def test_scanner_rejects_directory_mercator_path(tmp_path):
     config = MerkleConfig(mercator_path=str(some_dir))
     scanner = MercatorScanner(config)
 
-    result = scanner.discover_mercator()
+    # Prevent fallback discovery
+    with patch("pathlib.Path.glob", return_value=[]):
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("CLAUDE_PLUGIN_ROOT", None)
+            result = scanner.discover_mercator()
+
     assert result is None  # Should reject directory
 
 
@@ -123,7 +145,12 @@ def test_scanner_rejects_nonexistent_mercator_path(tmp_path):
     config = MerkleConfig(mercator_path=str(tmp_path / "does_not_exist.py"))
     scanner = MercatorScanner(config)
 
-    result = scanner.discover_mercator()
+    # Prevent fallback discovery
+    with patch("pathlib.Path.glob", return_value=[]):
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("CLAUDE_PLUGIN_ROOT", None)
+            result = scanner.discover_mercator()
+
     assert result is None
 
 

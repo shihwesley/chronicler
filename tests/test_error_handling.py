@@ -27,7 +27,7 @@ from chronicler_core.llm.openai_adapter import OpenAIProvider
 from chronicler_core.merkle.scanner import MercatorScanner
 from chronicler_core.output.writer import TechMdWriter
 from chronicler_core.plugins.loader import PluginLoader
-from chronicler_lite.storage.memvid_storage import _split_frontmatter
+# Import _split_frontmatter lazily to avoid memvid module loading side effects
 
 
 # ========================================================================
@@ -42,7 +42,9 @@ async def test_claude_provider_wraps_api_error():
     provider = ClaudeProvider(config)
 
     with patch.object(
-        provider._client.messages, "create", side_effect=AnthropicAPIError("test error")
+        provider._client.messages, "create", side_effect=AnthropicAPIError(
+            message="test error", request=Mock(), body=None
+        )
     ):
         with pytest.raises(LLMError) as exc_info:
             await provider.generate("system", "user")
@@ -62,7 +64,9 @@ async def test_claude_provider_marks_rate_limit_retryable():
     with patch.object(
         provider._client.messages,
         "create",
-        side_effect=AnthropicRateLimitError("rate limit"),
+        side_effect=AnthropicRateLimitError(
+            message="rate limit", response=Mock(), body=None
+        ),
     ):
         with pytest.raises(LLMError) as exc_info:
             await provider.generate("system", "user")
@@ -79,7 +83,9 @@ async def test_openai_provider_wraps_api_error():
     with patch.object(
         provider._client.chat.completions,
         "create",
-        side_effect=OpenAIAPIError("test error"),
+        side_effect=OpenAIAPIError(
+            message="test error", request=Mock(), body=None
+        ),
     ):
         with pytest.raises(LLMError) as exc_info:
             await provider.generate("system", "user")
@@ -98,7 +104,9 @@ async def test_openai_provider_marks_rate_limit_retryable():
     with patch.object(
         provider._client.chat.completions,
         "create",
-        side_effect=OpenAIRateLimitError("rate limit"),
+        side_effect=OpenAIRateLimitError(
+            message="rate limit", response=Mock(), body=None
+        ),
     ):
         with pytest.raises(LLMError) as exc_info:
             await provider.generate("system", "user")
@@ -161,9 +169,12 @@ async def test_ollama_stream_json_parse_error():
     config = LLMConfig(provider="ollama", model="test")
     provider = OllamaProvider(config)
 
+    async def mock_lines():
+        yield "invalid json"
+
     mock_response = AsyncMock()
     mock_response.raise_for_status = Mock()
-    mock_response.aiter_lines = AsyncMock(return_value=["invalid json"])
+    mock_response.aiter_lines = mock_lines
 
     with patch("httpx.AsyncClient.stream") as mock_stream:
         mock_stream.return_value.__aenter__.return_value = mock_response
@@ -188,15 +199,10 @@ def test_writer_handles_oserror_on_write(tmp_path):
     writer = TechMdWriter(config)
     doc = TechDoc(component_id="test", raw_content="content")
 
-    # Make directory read-only to trigger OSError
-    (tmp_path / "readonly").mkdir()
-    os.chmod(tmp_path / "readonly", 0o444)
-
-    try:
+    # Patch write_text to raise OSError instead of relying on file permissions
+    with patch("pathlib.Path.write_text", side_effect=OSError("disk full")):
         with pytest.raises(OSError):
-            writer.write(TechDoc(component_id="readonly/test", raw_content="content"))
-    finally:
-        os.chmod(tmp_path / "readonly", 0o755)
+            writer.write(doc)
 
 
 def test_writer_handles_yaml_parse_error_on_index_read(tmp_path, caplog):
@@ -219,16 +225,22 @@ def test_writer_handles_oserror_on_index_read(tmp_path, caplog):
     config = OutputConfig(base_dir=str(tmp_path), create_index=True)
     writer = TechMdWriter(config)
 
+    # Create an index file first so exists() returns True
     index_path = tmp_path / "_index.yaml"
-    index_path.mkdir()  # Make it a directory to trigger OSError
+    index_path.write_text("[]")
 
-    try:
-        doc = TechDoc(component_id="test", raw_content="content")
+    doc = TechDoc(component_id="test", raw_content="content")
+
+    original_read = Path.read_text
+    def selective_read(self, *args, **kwargs):
+        if self.name == "_index.yaml":
+            raise OSError("permission denied")
+        return original_read(self, *args, **kwargs)
+
+    with patch.object(Path, "read_text", selective_read):
         writer.write(doc)
 
-        assert any("Failed to read index" in rec.message for rec in caplog.records)
-    finally:
-        index_path.rmdir()
+    assert any("Failed to read index" in rec.message for rec in caplog.records)
 
 
 # ========================================================================
@@ -283,31 +295,32 @@ def test_scanner_fallback_diff_handles_oserror(tmp_path, caplog):
 
 def test_expand_env_vars_raises_on_missing_var():
     """_expand_env_vars raises ValueError when env var is missing."""
-    os.environ.pop("MISSING_VAR", None)
+    # Use an allowlisted var that's not set
+    os.environ.pop("ANTHROPIC_API_KEY", None)
 
     with pytest.raises(ValueError) as exc_info:
-        _expand_env_vars({"key": "${MISSING_VAR}"})
+        _expand_env_vars({"key": "${ANTHROPIC_API_KEY}"})
 
-    assert "MISSING_VAR" in str(exc_info.value)
+    assert "ANTHROPIC_API_KEY" in str(exc_info.value)
     assert "not set" in str(exc_info.value)
 
 
 def test_expand_env_vars_expands_existing_var():
     """_expand_env_vars expands when env var exists."""
-    os.environ["TEST_VAR"] = "test_value"
+    os.environ["ANTHROPIC_API_KEY"] = "test_value"
     try:
-        result = _expand_env_vars({"key": "${TEST_VAR}"})
+        result = _expand_env_vars({"key": "${ANTHROPIC_API_KEY}"})
         assert result == {"key": "test_value"}
     finally:
-        os.environ.pop("TEST_VAR", None)
+        os.environ.pop("ANTHROPIC_API_KEY", None)
 
 
 def test_expand_env_vars_nested_structure():
     """_expand_env_vars raises on missing var in nested structure."""
-    os.environ.pop("NESTED_VAR", None)
+    os.environ.pop("GITHUB_TOKEN", None)
 
     with pytest.raises(ValueError):
-        _expand_env_vars({"outer": {"inner": ["${NESTED_VAR}"]}})
+        _expand_env_vars({"outer": {"inner": ["${GITHUB_TOKEN}"]}})
 
 
 # ========================================================================
@@ -339,6 +352,8 @@ def test_plugin_loader_logs_warning_on_import_failure(caplog):
 
 def test_split_frontmatter_logs_warning_on_yaml_error(caplog):
     """_split_frontmatter logs warning on invalid YAML."""
+    from chronicler_lite.storage.memvid_storage import _split_frontmatter
+
     text = "---\ninvalid: yaml: [unclosed\n---\nbody"
 
     fm, body = _split_frontmatter(text)
