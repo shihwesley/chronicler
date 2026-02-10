@@ -11,6 +11,14 @@ import pytest
 from chronicler_core.interfaces.graph import GraphEdge, GraphNode, GraphPlugin
 
 
+def _has_strawberry() -> bool:
+    try:
+        import strawberry  # noqa: F401
+        return True
+    except ModuleNotFoundError:
+        return False
+
+
 # ---------------------------------------------------------------------------
 # Helpers — fake neo4j module so we never need the real driver
 # ---------------------------------------------------------------------------
@@ -93,7 +101,7 @@ def test_query_passthrough(graph):
     session.run.return_value = [{"col": "val"}]
 
     result = graph.query("RETURN 1")
-    session.run.assert_called_once_with("RETURN 1")
+    session.run.assert_called_once_with("RETURN 1", parameters={})
     assert result == [{"col": "val"}]
 
 
@@ -150,6 +158,10 @@ def test_protocol_conformance(graph):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.skipif(
+    not _has_strawberry(),
+    reason="strawberry-graphql not installed (enterprise[neo4j] extra)",
+)
 def test_graphql_schema_has_query_type(mock_neo4j):
     from chronicler_enterprise.plugins.mnemon.graphql_server import GraphQLServer
     from chronicler_enterprise.plugins.mnemon.neo4j_graph import Neo4jGraph
@@ -161,6 +173,10 @@ def test_graphql_schema_has_query_type(mock_neo4j):
     assert "Query" in schema_str
 
 
+@pytest.mark.skipif(
+    not _has_strawberry(),
+    reason="strawberry-graphql not installed (enterprise[neo4j] extra)",
+)
 def test_graphql_component_field_exists(mock_neo4j):
     from chronicler_enterprise.plugins.mnemon.graphql_server import GraphQLServer
     from chronicler_enterprise.plugins.mnemon.neo4j_graph import Neo4jGraph

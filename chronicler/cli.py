@@ -27,6 +27,8 @@ from chronicler_core.output import TechMdValidator, TechMdWriter
 from chronicler_core.vcs import CrawlResult, VCSCrawler, create_provider
 from chronicler_core.vcs.models import RepoMetadata
 
+__version__ = "0.1.0"
+
 app = typer.Typer(
     name="chronicler",
     help="Living Technical Ledger — auto-generate .tech.md for your repos.",
@@ -51,11 +53,20 @@ def _get_config() -> ChroniclerConfig:
     return _config
 
 
+def _version_callback(value: bool) -> None:
+    if value:
+        typer.echo(f"chronicler {__version__}")
+        raise typer.Exit()
+
+
 @app.callback()
 def main(
     config: Annotated[
         str | None, typer.Option("--config", "-c", help="Path to chronicler.yaml")
     ] = None,
+    version: Annotated[
+        bool, typer.Option("--version", "-V", callback=_version_callback, is_eager=True, help="Show version")
+    ] = False,
 ) -> None:
     """Global options."""
     global _config

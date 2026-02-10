@@ -26,7 +26,12 @@ dev = [
 chronicler = "chronicler.cli:app"
 
 [tool.uv.workspace]
-members = ["packages/*"]
+members = [
+    "packages/chronicler-core",
+    "packages/chronicler-lite",
+    "packages/chronicler-enterprise",
+    "packages/chronicler-obsidian",
+]
 
 [tool.uv.sources]
 chronicler-core = { workspace = true }
