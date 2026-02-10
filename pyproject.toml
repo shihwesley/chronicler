@@ -10,6 +10,7 @@ requires-python = ">=3.11"
 dependencies = [
     "chronicler-core",
     "chronicler-lite",
+    "chronicler-obsidian",
     "typer",
     "rich",
 ]
@@ -31,6 +32,7 @@ members = ["packages/*"]
 chronicler-core = { workspace = true }
 chronicler-lite = { workspace = true }
 chronicler-enterprise = { workspace = true }
+chronicler-obsidian = { workspace = true }
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
