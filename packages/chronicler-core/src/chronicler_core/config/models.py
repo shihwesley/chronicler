@@ -73,6 +73,15 @@ class PluginsConfig(BaseModel):
     storage: str | None = None
 
 
+class MerkleConfig(BaseModel):
+    algorithm: str = "sha256"
+    doc_dir: str = ".chronicler"
+    ignore_patterns: list[str] = Field(default_factory=lambda: [
+        ".git", "node_modules", "__pycache__", ".venv", "build", "dist", ".tox"
+    ])
+    mercator_path: str | None = None
+
+
 class ChroniclerConfig(BaseModel):
     llm: LLMConfig = Field(default_factory=LLMConfig)
     queue: QueueConfig = Field(default_factory=QueueConfig)
@@ -81,5 +90,6 @@ class ChroniclerConfig(BaseModel):
     monorepo: MonorepoConfig = Field(default_factory=MonorepoConfig)
     document_conversion: DocumentConversionConfig = Field(default_factory=DocumentConversionConfig)
     plugins: PluginsConfig = Field(default_factory=PluginsConfig)
+    merkle: MerkleConfig = Field(default_factory=MerkleConfig)
     log_level: Literal["debug", "info", "warn", "error"] = "info"
     log_format: Literal["text", "json"] = "text"
