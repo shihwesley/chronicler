@@ -6,14 +6,14 @@ from unittest.mock import AsyncMock, MagicMock
 
 from github import GithubException
 
-from chronicler.config.models import VCSConfig
-from chronicler.vcs.crawler import (
+from chronicler_core.config.models import VCSConfig
+from chronicler_core.vcs.crawler import (
     KEY_FILES,
     MAX_KEY_FILE_SIZE,
     VCSCrawler,
     _matches_key_file,
 )
-from chronicler.vcs.models import FileNode, RepoMetadata
+from chronicler_core.vcs.models import FileNode, RepoMetadata
 
 
 # ── _matches_key_file ───────────────────────────────────────────────

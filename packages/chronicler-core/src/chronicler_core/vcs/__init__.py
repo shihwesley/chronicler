@@ -2,11 +2,11 @@
 
 import os
 
-from chronicler.config.models import VCSConfig
-from chronicler.vcs.base import VCSProvider
-from chronicler.vcs.github import GitHubProvider
-from chronicler.vcs.crawler import VCSCrawler
-from chronicler.vcs.models import CrawlResult, FileNode, RepoMetadata
+from chronicler_core.config.models import VCSConfig
+from chronicler_core.vcs.base import VCSProvider
+from chronicler_core.vcs.github import GitHubProvider
+from chronicler_core.vcs.crawler import VCSCrawler
+from chronicler_core.vcs.models import CrawlResult, FileNode, RepoMetadata
 
 
 def create_provider(config: VCSConfig) -> VCSProvider:

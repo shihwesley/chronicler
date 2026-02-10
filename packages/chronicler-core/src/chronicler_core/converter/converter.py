@@ -10,8 +10,8 @@ from functools import cached_property
 from pathlib import Path
 from typing import IO, Any
 
-from chronicler.config.models import DocumentConversionConfig
-from chronicler.converter.models import ConversionResult
+from chronicler_core.config.models import DocumentConversionConfig
+from chronicler_core.converter.models import ConversionResult
 
 logger = logging.getLogger(__name__)
 

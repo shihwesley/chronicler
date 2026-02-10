@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 
-from chronicler.vcs.models import FileNode, RepoMetadata
+from chronicler_core.vcs.models import FileNode, RepoMetadata
 
 
 class VCSProvider(ABC):

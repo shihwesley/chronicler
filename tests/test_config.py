@@ -5,7 +5,7 @@ import pytest
 from unittest.mock import patch
 from pydantic import ValidationError
 
-from chronicler.config.models import (
+from chronicler_core.config.models import (
     ChroniclerConfig,
     DocumentConversionConfig,
     FormatConfig,
@@ -16,7 +16,7 @@ from chronicler.config.models import (
     QueueConfig,
     VCSConfig,
 )
-from chronicler.config.loader import load_config, _expand_env_vars
+from chronicler_core.config.loader import load_config, _expand_env_vars
 
 
 # ── ChroniclerConfig defaults ──────────────────────────────────────

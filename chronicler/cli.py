@@ -12,14 +12,14 @@ from rich.syntax import Syntax
 from rich.table import Table
 from rich.tree import Tree
 
-from .config import ChroniclerConfig, load_config
-from .config.loader import DEFAULT_CONFIG_TEMPLATE
-from .converter import DocumentConverter, should_convert
-from .drafter import Drafter
-from .llm import create_llm_provider
-from .output import TechMdValidator, TechMdWriter
-from .vcs import CrawlResult, VCSCrawler, create_provider
-from .vcs.models import RepoMetadata
+from chronicler_core.config import ChroniclerConfig, load_config
+from chronicler_core.config.loader import DEFAULT_CONFIG_TEMPLATE
+from chronicler_core.converter import DocumentConverter, should_convert
+from chronicler_core.drafter import Drafter
+from chronicler_core.llm import create_llm_provider
+from chronicler_core.output import TechMdValidator, TechMdWriter
+from chronicler_core.vcs import CrawlResult, VCSCrawler, create_provider
+from chronicler_core.vcs.models import RepoMetadata
 
 app = typer.Typer(
     name="chronicler",

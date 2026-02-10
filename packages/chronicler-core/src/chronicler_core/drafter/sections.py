@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from chronicler.drafter.models import PromptContext
-from chronicler.drafter.prompts import PromptTemplate
-from chronicler.llm.base import LLMProvider
+from chronicler_core.drafter.models import PromptContext
+from chronicler_core.drafter.prompts import PromptTemplate
+from chronicler_core.llm.base import LLMProvider
 
 _ARCHITECTURAL_INTENT_SYSTEM = """\
 You are Chronicler, an enterprise technical documentation generator. \

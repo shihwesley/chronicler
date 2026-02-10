@@ -6,8 +6,8 @@ from collections.abc import AsyncIterator
 
 from anthropic import AsyncAnthropic
 
-from chronicler.llm.base import LLMProvider
-from chronicler.llm.models import LLMConfig, LLMResponse, TokenUsage
+from chronicler_core.llm.base import LLMProvider
+from chronicler_core.llm.models import LLMConfig, LLMResponse, TokenUsage
 
 
 class ClaudeProvider(LLMProvider):

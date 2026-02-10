@@ -7,8 +7,8 @@ from functools import cached_property
 from github import Auth, Github, GithubException
 from github.Repository import Repository
 
-from chronicler.vcs.base import VCSProvider
-from chronicler.vcs.models import FileNode, RepoMetadata
+from chronicler_core.vcs.base import VCSProvider
+from chronicler_core.vcs.models import FileNode, RepoMetadata
 
 
 class GitHubProvider(VCSProvider):

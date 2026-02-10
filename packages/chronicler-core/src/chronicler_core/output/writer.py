@@ -9,8 +9,8 @@ from pathlib import Path
 
 import yaml
 
-from chronicler.config.models import OutputConfig
-from chronicler.drafter.models import TechDoc
+from chronicler_core.config.models import OutputConfig
+from chronicler_core.drafter.models import TechDoc
 
 logger = logging.getLogger(__name__)
 

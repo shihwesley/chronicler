@@ -5,14 +5,14 @@ import pytest
 from pathlib import Path
 from unittest.mock import patch, MagicMock, PropertyMock
 
-from chronicler.config.models import (
+from chronicler_core.config.models import (
     DocumentConversionConfig,
     FormatConfig,
     OCRConfig,
     DocCacheConfig,
 )
-from chronicler.converter.converter import should_convert, DocumentConverter
-from chronicler.converter.models import ConversionResult
+from chronicler_core.converter.converter import should_convert, DocumentConverter
+from chronicler_core.converter.models import ConversionResult
 
 
 # ---------------------------------------------------------------------------

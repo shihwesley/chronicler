@@ -6,8 +6,8 @@ import json
 import re
 from collections import defaultdict
 
-from chronicler.drafter.models import PromptContext
-from chronicler.vcs.models import CrawlResult, FileNode
+from chronicler_core.drafter.models import PromptContext
+from chronicler_core.vcs.models import CrawlResult, FileNode
 
 # Priority tiers for file tree ordering (lower = higher priority).
 _PRIORITY_PATTERNS: list[tuple[re.Pattern[str], int]] = [

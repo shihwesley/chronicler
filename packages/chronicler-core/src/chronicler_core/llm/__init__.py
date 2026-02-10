@@ -2,11 +2,11 @@
 
 import os
 
-from chronicler.config.models import LLMConfig as AppLLMConfig
-from chronicler.llm.base import LLMProvider
-from chronicler.llm.claude import ClaudeProvider
-from chronicler.llm.models import LLMConfig, LLMResponse, TokenUsage
-from chronicler.llm.openai_adapter import OpenAIProvider
+from chronicler_core.config.models import LLMConfig as AppLLMConfig
+from chronicler_core.llm.base import LLMProvider
+from chronicler_core.llm.claude import ClaudeProvider
+from chronicler_core.llm.models import LLMConfig, LLMResponse, TokenUsage
+from chronicler_core.llm.openai_adapter import OpenAIProvider
 
 _PROVIDER_MAP: dict[str, type[LLMProvider]] = {
     "anthropic": ClaudeProvider,

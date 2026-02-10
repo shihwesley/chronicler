@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from collections import Counter
 
-from chronicler.vcs.models import FileNode, RepoMetadata
+from chronicler_core.vcs.models import FileNode, RepoMetadata
 
 # Directory patterns that indicate architectural layer.
 _LAYER_PATTERNS: dict[str, list[str]] = {
