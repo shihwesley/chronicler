@@ -29,7 +29,7 @@ def _build_dataview_lines(edges: list[dict]) -> list[str]:
     for edge in edges:
         target = edge.get("target", "")
         edge_type = edge.get("type", "")
-        via = edge.get("via", "")
+        via = edge.get("protocol", "") or edge.get("via", "")
         suffix = f" via {via}" if via else ""
 
         if edge_type in _DEPENDS_TYPES:
