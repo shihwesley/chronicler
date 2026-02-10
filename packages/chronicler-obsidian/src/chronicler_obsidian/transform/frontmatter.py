@@ -42,6 +42,11 @@ def _build_frontmatter(meta: dict) -> dict:
     if team := meta.get("owner_team"):
         tags.append(team)
 
+    # Carry over any source-level tags
+    for t in meta.get("tags", []):
+        if t not in tags:
+            tags.append(t)
+
     # Flatten governance dict
     governance = meta.get("governance", {})
 
