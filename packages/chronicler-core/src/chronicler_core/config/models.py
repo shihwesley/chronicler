@@ -82,6 +82,32 @@ class MerkleConfig(BaseModel):
     mercator_path: str | None = None
 
 
+class ObsidianRestConfig(BaseModel):
+    url: str = "https://127.0.0.1:27124"
+    token_env: str = "OBSIDIAN_REST_TOKEN"
+
+
+class ObsidianTransformConfig(BaseModel):
+    rewrite_agent_uris: bool = True
+    flatten_governance: bool = True
+    add_dataview_fields: bool = True
+    generate_index: bool = True
+    css_class: str = "chronicler-doc"
+
+
+class ObsidianMappingConfig(BaseModel):
+    tags_from: list[str] = Field(default_factory=lambda: ["layer", "security_level", "owner_team"])
+    aliases_from: list[str] = Field(default_factory=lambda: ["component_id"])
+
+
+class ObsidianConfig(BaseModel):
+    vault_path: str = ""
+    sync_mode: Literal["filesystem", "rest-api"] = "filesystem"
+    rest_api: ObsidianRestConfig = Field(default_factory=ObsidianRestConfig)
+    transform: ObsidianTransformConfig = Field(default_factory=ObsidianTransformConfig)
+    mapping: ObsidianMappingConfig = Field(default_factory=ObsidianMappingConfig)
+
+
 class ChroniclerConfig(BaseModel):
     llm: LLMConfig = Field(default_factory=LLMConfig)
     queue: QueueConfig = Field(default_factory=QueueConfig)
@@ -91,5 +117,6 @@ class ChroniclerConfig(BaseModel):
     document_conversion: DocumentConversionConfig = Field(default_factory=DocumentConversionConfig)
     plugins: PluginsConfig = Field(default_factory=PluginsConfig)
     merkle: MerkleConfig = Field(default_factory=MerkleConfig)
+    obsidian: ObsidianConfig = Field(default_factory=ObsidianConfig)
     log_level: Literal["debug", "info", "warn", "error"] = "info"
     log_format: Literal["text", "json"] = "text"

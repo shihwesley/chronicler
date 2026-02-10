@@ -1,0 +1,15 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "chronicler-obsidian"
+version = "0.1.0"
+description = "Obsidian vault sync daemon for Chronicler"
+requires-python = ">=3.11"
+dependencies = [
+    "chronicler-core",
+    "watchdog>=4.0.0",
+    "requests>=2.31.0",
+    "pyyaml",
+]

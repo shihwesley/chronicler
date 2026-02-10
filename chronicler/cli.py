@@ -38,6 +38,9 @@ app.add_typer(config_app, name="config")
 queue_app = typer.Typer(help="Manage job queue.")
 app.add_typer(queue_app, name="queue")
 
+obsidian_app = typer.Typer(help="Obsidian vault integration.")
+app.add_typer(obsidian_app, name="obsidian")
+
 # Global state
 _config: ChroniclerConfig | None = None
 
@@ -602,6 +605,142 @@ def queue_run(
                 rprint(f"[red]Error processing {job.id}:[/red] {e}")
 
     rprint(f"[green]Done.[/green] Processed {processed} job(s).")
+
+
+# ---------------------------------------------------------------------------
+# Obsidian commands
+# ---------------------------------------------------------------------------
+
+
+@obsidian_app.command()
+def export(
+    vault: Annotated[str, typer.Option("--vault", "-v", help="Path to Obsidian vault")] = "",
+    source: Annotated[str, typer.Option("--source", "-s", help="Path to .chronicler/ directory")] = ".chronicler",
+    dry_run: Annotated[bool, typer.Option("--dry-run", help="Show what would be synced")] = False,
+) -> None:
+    """Export .tech.md files to Obsidian vault."""
+    cfg = _get_config()
+    vault_path = vault or cfg.obsidian.vault_path
+    if not vault_path:
+        typer.echo("Error: --vault is required or set obsidian.vault_path in config")
+        raise typer.Exit(1)
+
+    from chronicler_obsidian.sync import ObsidianSync
+    from chronicler_obsidian.transform import (
+        TransformPipeline,
+        LinkRewriter,
+        FrontmatterFlattener,
+        DataviewInjector,
+        IndexGenerator,
+    )
+
+    pipeline = TransformPipeline([
+        LinkRewriter(),
+        FrontmatterFlattener(),
+        DataviewInjector(),
+        IndexGenerator(),
+    ])
+
+    sync = ObsidianSync(
+        source_dir=source,
+        vault_path=vault_path,
+        config=cfg.obsidian,
+        pipeline=pipeline,
+    )
+
+    if dry_run:
+        source_dir = Path(source)
+        files = list(source_dir.rglob("*.tech.md")) if source_dir.is_dir() else []
+        if not files:
+            rprint("[yellow]No .tech.md files found.[/yellow]")
+            raise typer.Exit(0)
+        table = Table(title="Dry Run — files that would be synced")
+        table.add_column("Source", style="cyan")
+        table.add_column("Destination", style="green")
+        for f in sorted(files):
+            rel = str(f.relative_to(source_dir))
+            dest = rel.replace(".tech.md", ".md")
+            table.add_row(rel, dest)
+        rprint(table)
+        return
+
+    report = sync.export()
+
+    table = Table(title="Obsidian Export")
+    table.add_column("Metric", style="cyan")
+    table.add_column("Value", justify="right", style="green")
+    table.add_row("Synced", str(report.synced))
+    table.add_row("Skipped", str(report.skipped))
+    table.add_row("Errors", str(len(report.errors)))
+    table.add_row("Duration", f"{report.duration:.2f}s")
+    rprint(table)
+
+    for err in report.errors:
+        rprint(f"  [red]error:[/red] {err.file}: {err.error}")
+
+
+@obsidian_app.command(name="sync")
+def sync_cmd(
+    watch: Annotated[bool, typer.Option("--watch", "-w", help="Watch for changes")] = False,
+    rest: Annotated[bool, typer.Option("--rest", help="Sync via REST API")] = False,
+    vault: Annotated[str, typer.Option("--vault", "-v", help="Path to Obsidian vault")] = "",
+    source: Annotated[str, typer.Option("--source", "-s", help="Source .chronicler/ directory")] = ".chronicler",
+    url: Annotated[str, typer.Option("--url", help="REST API URL")] = "",
+    token: Annotated[str, typer.Option("--token", help="REST API token")] = "",
+) -> None:
+    """Sync .tech.md files to Obsidian (watch mode or REST API)."""
+    if not watch and not rest:
+        typer.echo("Error: specify --watch or --rest")
+        raise typer.Exit(1)
+
+    cfg = _get_config()
+    vault_path = vault or cfg.obsidian.vault_path
+
+    from chronicler_obsidian.sync import ObsidianSync
+    from chronicler_obsidian.transform import (
+        TransformPipeline,
+        LinkRewriter,
+        FrontmatterFlattener,
+        DataviewInjector,
+        IndexGenerator,
+    )
+
+    pipeline = TransformPipeline([
+        LinkRewriter(),
+        FrontmatterFlattener(),
+        DataviewInjector(),
+        IndexGenerator(),
+    ])
+
+    sync = ObsidianSync(
+        source_dir=source,
+        vault_path=vault_path or "",
+        config=cfg.obsidian,
+        pipeline=pipeline,
+    )
+
+    if watch:
+        if not vault_path:
+            typer.echo("Error: --vault is required for watch mode")
+            raise typer.Exit(1)
+        rprint(f"[bold]Watching[/bold] {source} -> {vault_path}")
+        sync.watch()
+    elif rest:
+        report = sync.sync_rest(
+            api_url=url or None,
+            token=token or None,
+        )
+        table = Table(title="REST Sync Report")
+        table.add_column("Metric", style="cyan")
+        table.add_column("Value", justify="right", style="green")
+        table.add_row("Synced", str(report.synced))
+        table.add_row("Skipped", str(report.skipped))
+        table.add_row("Errors", str(len(report.errors)))
+        table.add_row("Duration", f"{report.duration:.2f}s")
+        rprint(table)
+
+        for err in report.errors:
+            rprint(f"  [red]error:[/red] {err.file}: {err.error}")
 
 
 # ---------------------------------------------------------------------------
