@@ -10,11 +10,12 @@ from pydantic import BaseModel
 class LLMConfig(BaseModel):
     """Configuration for an LLM provider."""
 
-    provider: Literal["anthropic", "openai", "google"]
+    provider: Literal["anthropic", "openai", "google", "ollama", "auto"]
     model: str
     max_tokens: int = 4096
     temperature: float = 0.3
     api_key: str | None = None
+    base_url: str | None = None
 
 
 class TokenUsage(BaseModel):

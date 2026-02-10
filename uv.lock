@@ -321,6 +321,7 @@ source = { editable = "packages/chronicler-core" }
 dependencies = [
     { name = "anthropic" },
     { name = "google-generativeai" },
+    { name = "httpx" },
     { name = "markitdown", extra = ["docx", "pdf", "pptx"] },
     { name = "openai" },
     { name = "pydantic" },
@@ -332,6 +333,7 @@ dependencies = [
 requires-dist = [
     { name = "anthropic" },
     { name = "google-generativeai" },
+    { name = "httpx" },
     { name = "markitdown", extras = ["pdf", "docx", "pptx"] },
     { name = "openai" },
     { name = "pydantic", specifier = ">=2.0.0" },
