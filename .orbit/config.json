@@ -1,0 +1,7 @@
+{
+  "type": "python",
+  "sidecars": [],
+  "testCommand": "pytest",
+  "buildCommand": "pip install -e .",
+  "supported": true
+}

@@ -61,9 +61,13 @@ class TechMdWriter:
             logger.debug("dry-run: would write %s", dest)
             return dest
 
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_text(tech_doc.raw_content, encoding="utf-8")
-        logger.info("wrote %s (%d bytes)", dest, len(tech_doc.raw_content))
+        try:
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_text(tech_doc.raw_content, encoding="utf-8")
+            logger.info("wrote %s (%d bytes)", dest, len(tech_doc.raw_content))
+        except OSError as e:
+            logger.error("Failed to write %s: %s", dest, e)
+            raise
 
         if self.config.create_index:
             self._update_index(tech_doc.component_id, dest)
@@ -82,10 +86,15 @@ class TechMdWriter:
 
         entries: list[dict] = []
         if index_path.exists():
-            raw = index_path.read_text(encoding="utf-8")
-            loaded = yaml.safe_load(raw)
-            if isinstance(loaded, list):
-                entries = loaded
+            try:
+                raw = index_path.read_text(encoding="utf-8")
+                loaded = yaml.safe_load(raw)
+                if isinstance(loaded, list):
+                    entries = loaded
+            except OSError as e:
+                logger.warning("Failed to read index %s: %s", index_path, e)
+            except yaml.YAMLError as e:
+                logger.warning("Failed to parse index %s: %s", index_path, e)
 
         # Upsert: replace existing entry for same component_id
         entries = [e for e in entries if e.get("component_id") != component_id]
@@ -95,8 +104,12 @@ class TechMdWriter:
             "timestamp": datetime.now(timezone.utc).isoformat(),
         })
 
-        index_path.write_text(
-            yaml.safe_dump(entries, default_flow_style=False, sort_keys=False),
-            encoding="utf-8",
-        )
-        logger.debug("updated index %s (%d entries)", index_path, len(entries))
+        try:
+            index_path.write_text(
+                yaml.safe_dump(entries, default_flow_style=False, sort_keys=False),
+                encoding="utf-8",
+            )
+            logger.debug("updated index %s (%d entries)", index_path, len(entries))
+        except OSError as e:
+            logger.error("Failed to write index %s: %s", index_path, e)
+            raise

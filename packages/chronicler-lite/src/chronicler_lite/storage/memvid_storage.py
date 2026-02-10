@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 import yaml
 from memvid_sdk import Memvid
 
 from chronicler_core.interfaces.storage import SearchResult
+
+logger = logging.getLogger(__name__)
 
 
 class MemVidStorage:
@@ -129,7 +132,8 @@ def _split_frontmatter(text: str) -> tuple[dict, str]:
 
     try:
         fm = yaml.safe_load(parts[1])
-    except yaml.YAMLError:
+    except yaml.YAMLError as e:
+        logger.warning("Failed to parse YAML frontmatter: %s", e)
         return {}, text
 
     if not isinstance(fm, dict):

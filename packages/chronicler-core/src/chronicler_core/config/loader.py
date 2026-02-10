@@ -49,17 +49,23 @@ def _expand_env_vars(obj: object) -> object:
     """Recursively expand ${VAR} references in strings.
 
     Only variables in _ALLOWED_ENV_VARS are expanded.
-    Raises ValueError if a disallowed variable is referenced.
+    Raises ValueError if a disallowed variable is referenced or if
+    an allowed variable is not set in the environment.
     """
     if isinstance(obj, str):
-        def replacer(m):
+        def replacer(m: re.Match[str]) -> str:
             var_name = m.group(1)
             if var_name not in _ALLOWED_ENV_VARS:
                 raise ValueError(
                     f"Env var ${{{var_name}}} not in allowlist. "
                     f"Add to _ALLOWED_ENV_VARS or use direct value."
                 )
-            return os.environ.get(var_name, "")
+            value = os.environ.get(var_name)
+            if value is None:
+                raise ValueError(
+                    f"Environment variable ${{{var_name}}} is referenced but not set"
+                )
+            return value
         return re.sub(r"\$\{(\w+)\}", replacer, obj)
     elif isinstance(obj, dict):
         return {k: _expand_env_vars(v) for k, v in obj.items()}

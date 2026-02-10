@@ -7,6 +7,19 @@ from typing import Literal
 from pydantic import BaseModel
 
 
+class LLMError(Exception):
+    """Wraps provider-specific exceptions with context."""
+
+    def __init__(
+        self, provider: str, operation: str, cause: Exception, retryable: bool = False
+    ) -> None:
+        self.provider = provider
+        self.operation = operation
+        self.retryable = retryable
+        super().__init__(f"{provider} {operation} failed: {cause}")
+        self.__cause__ = cause
+
+
 class LLMConfig(BaseModel):
     """Configuration for an LLM provider."""
 
