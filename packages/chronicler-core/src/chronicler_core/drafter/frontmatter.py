@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from collections import Counter
 
+from chronicler_core.drafter.models import FrontmatterModel, GovernanceModel
 from chronicler_core.vcs.models import FileNode, RepoMetadata
 
 # Directory patterns that indicate architectural layer.
@@ -22,24 +23,24 @@ def generate_frontmatter(
     metadata: RepoMetadata,
     key_files: dict[str, str],
     tree: list[FileNode],
-) -> dict:
-    """Generate YAML frontmatter dict from repo metadata.
+) -> FrontmatterModel:
+    """Generate YAML frontmatter from repo metadata.
 
-    Returns a dict ready for yaml.dump() with required .tech.md fields.
+    Returns a FrontmatterModel with required .tech.md fields.
     """
-    return {
-        "component_id": metadata.full_name,
-        "version": "0.1.0",
-        "owner_team": _parse_owner(key_files),
-        "layer": _infer_layer(tree),
-        "security_level": "low",
-        "governance": {
-            "business_impact": None,
-            "verification_status": "ai_draft",
-            "visibility": "internal",
-        },
-        "edges": [],
-    }
+    return FrontmatterModel(
+        component_id=metadata.full_name,
+        version="0.1.0",
+        owner_team=_parse_owner(key_files),
+        layer=_infer_layer(tree),
+        security_level="low",
+        governance=GovernanceModel(
+            business_impact=None,
+            verification_status="ai_draft",
+            visibility="internal",
+        ),
+        edges=[],
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -191,9 +191,9 @@ def test_diff_no_changes(tmp_path: Path):
     t1 = MerkleTree.build(root)
     t2 = MerkleTree.build(root)
     d = t1.diff(t2)
-    assert d.changed == []
-    assert d.added == []
-    assert d.removed == []
+    assert d.changed == ()
+    assert d.added == ()
+    assert d.removed == ()
     assert d.root_changed is False
 
 
@@ -292,15 +292,18 @@ def test_serialized_json_is_valid(tmp_path: Path):
 
 def test_update_node(tmp_path: Path):
     """update_node changes hashes and clears stale flag."""
+    from dataclasses import replace
     root = _make_project(tmp_path)
     tree = MerkleTree.build(root)
 
-    node = tree.nodes["src/main.py"]
-    node.stale = True
+    # Mark node as stale via replace (frozen dataclass)
+    old_node = tree.nodes["src/main.py"]
+    tree.nodes["src/main.py"] = replace(old_node, stale=True)
     tree.update_node("src/main.py", source_hash="aabbccddeeff", doc_hash="112233445566")
-    assert node.source_hash == "aabbccddeeff"
-    assert node.doc_hash == "112233445566"
-    assert node.stale is False
+    updated = tree.nodes["src/main.py"]
+    assert updated.source_hash == "aabbccddeeff"
+    assert updated.doc_hash == "112233445566"
+    assert updated.stale is False
 
 
 def test_update_node_missing_raises(tmp_path: Path):
@@ -308,4 +311,4 @@ def test_update_node_missing_raises(tmp_path: Path):
     root = _make_project(tmp_path)
     tree = MerkleTree.build(root)
     with pytest.raises(KeyError):
-        tree.update_node("nonexistent.py", source_hash="abc")
+        tree.update_node("nonexistent.py", source_hash="aabbccddeeff")

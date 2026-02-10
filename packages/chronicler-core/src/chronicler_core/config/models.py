@@ -2,14 +2,14 @@ from pydantic import BaseModel, Field
 from typing import Literal
 
 
-class LLMConfig(BaseModel):
+class LLMSettings(BaseModel):
     provider: Literal["anthropic", "openai", "google", "ollama", "auto"] = "anthropic"
     model: str = "claude-sonnet-4-20250514"
     api_key_env: str = "ANTHROPIC_API_KEY"
-    max_tokens: int = 4096
-    timeout: int = 60
-    max_retries: int = 3
-    retry_delay: float = 1.0
+    max_tokens: int = Field(default=4096, gt=0)
+    timeout: int = Field(default=60, gt=0)
+    max_retries: int = Field(default=3, ge=0)
+    retry_delay: float = Field(default=1.0, gt=0)
     base_url: str | None = None
 
 
@@ -17,14 +17,14 @@ class QueueConfig(BaseModel):
     provider: Literal["sqs", "pubsub", "servicebus", "local"] = "local"
     url: str | None = None
     dlq_url: str | None = None
-    max_workers: int = 5
-    visibility_timeout: int = 300
+    max_workers: int = Field(default=5, gt=0)
+    visibility_timeout: int = Field(default=300, gt=0)
 
 
 class VCSConfig(BaseModel):
     provider: Literal["github", "azure", "gitlab"] = "github"
     token_env: str = "GITHUB_TOKEN"
-    allowed_orgs: list[str] = []
+    allowed_orgs: list[str] = Field(default_factory=list)
     rate_limit_buffer: int = 100
 
 
@@ -62,7 +62,7 @@ class DocumentConversionConfig(BaseModel):
     enabled: bool = True
     formats: FormatConfig = Field(default_factory=FormatConfig)
     ocr: OCRConfig = Field(default_factory=OCRConfig)
-    max_file_size_mb: int = 50
+    max_file_size_mb: int = Field(default=50, gt=0)
     max_pages: int = 100
     cache: DocCacheConfig = Field(default_factory=DocCacheConfig)
 
@@ -110,7 +110,7 @@ class ObsidianConfig(BaseModel):
 
 
 class ChroniclerConfig(BaseModel):
-    llm: LLMConfig = Field(default_factory=LLMConfig)
+    llm: LLMSettings = Field(default_factory=LLMSettings)
     queue: QueueConfig = Field(default_factory=QueueConfig)
     vcs: VCSConfig = Field(default_factory=VCSConfig)
     output: OutputConfig = Field(default_factory=OutputConfig)

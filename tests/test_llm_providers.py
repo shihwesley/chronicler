@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
-from chronicler_core.config.models import LLMConfig as AppLLMConfig
+from chronicler_core.config.models import LLMSettings as AppLLMSettings
 from chronicler_core.llm import create_llm_provider
 from chronicler_core.llm.auto_detect import auto_detect_provider
 from chronicler_core.llm.claude import ClaudeProvider
@@ -26,7 +26,7 @@ class TestCreateLLMProviderNew:
     @patch.dict(os.environ, {"GOOGLE_API_KEY": "goog-key-123"})
     @patch("chronicler_core.llm.gemini.genai")
     def test_creates_gemini_provider(self, mock_genai):
-        config = AppLLMConfig(
+        config = AppLLMSettings(
             provider="google",
             model="gemini-2.0-flash",
             api_key_env="GOOGLE_API_KEY",
@@ -35,7 +35,7 @@ class TestCreateLLMProviderNew:
         assert isinstance(provider, GeminiProvider)
 
     def test_creates_ollama_provider(self):
-        config = AppLLMConfig(
+        config = AppLLMSettings(
             provider="ollama",
             model="llama3",
         )
@@ -43,7 +43,7 @@ class TestCreateLLMProviderNew:
         assert isinstance(provider, OllamaProvider)
 
     def test_ollama_provider_custom_base_url(self):
-        config = AppLLMConfig(
+        config = AppLLMSettings(
             provider="ollama",
             model="llama3",
             base_url="http://myhost:11434",

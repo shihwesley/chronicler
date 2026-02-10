@@ -6,6 +6,7 @@ import hashlib
 import json
 import re
 from collections import defaultdict
+from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -186,7 +187,7 @@ class MerkleTree:
             nodes[dpath] = MerkleNode(
                 path=dpath,
                 hash=dir_hash,
-                children=sorted(child_paths),
+                children=tuple(sorted(child_paths)),
             )
 
         root_hash = nodes[""].hash if "" in nodes else compute_hash(b"")
@@ -206,7 +207,7 @@ class MerkleTree:
         """Re-hash source files on disk; return nodes whose source changed."""
         root = Path(self.root_path)
         stale: list[MerkleNode] = []
-        for node in self.nodes.values():
+        for path, node in list(self.nodes.items()):
             if node.source_hash is None:
                 continue  # directory node
             fpath = root / node.path
@@ -214,8 +215,9 @@ class MerkleTree:
                 continue
             current = compute_file_hash(fpath)
             if current != node.source_hash:
-                node.stale = True
-                stale.append(node)
+                updated = replace(node, stale=True)
+                self.nodes[path] = updated
+                stale.append(updated)
         return stale
 
     # ------------------------------------------------------------------
@@ -246,10 +248,10 @@ class MerkleTree:
                     stale_list.append(p)
 
         return MerkleDiff(
-            changed=changed,
-            added=added,
-            removed=removed,
-            stale=stale_list,
+            changed=tuple(changed),
+            added=tuple(added),
+            removed=tuple(removed),
+            stale=tuple(stale_list),
             root_changed=self.root_hash != other.root_hash,
             old_root_hash=self.root_hash,
             new_root_hash=other.root_hash,
@@ -269,11 +271,10 @@ class MerkleTree:
         if path not in self.nodes:
             raise KeyError(f"Node not found: {path}")
         node = self.nodes[path]
-        node.source_hash = source_hash
-        node.hash = source_hash
+        updates: dict = {"source_hash": source_hash, "hash": source_hash, "stale": False}
         if doc_hash is not None:
-            node.doc_hash = doc_hash
-        node.stale = False
+            updates["doc_hash"] = doc_hash
+        self.nodes[path] = replace(node, **updates)
 
     # ------------------------------------------------------------------
     # Serialization
@@ -291,7 +292,7 @@ class MerkleTree:
                 path: {
                     "path": n.path,
                     "hash": n.hash,
-                    "children": n.children,
+                    "children": list(n.children),
                     "source_hash": n.source_hash,
                     "doc_hash": n.doc_hash,
                     "doc_path": n.doc_path,
@@ -311,7 +312,7 @@ class MerkleTree:
             nodes[path] = MerkleNode(
                 path=ndata["path"],
                 hash=ndata["hash"],
-                children=ndata.get("children", []),
+                children=tuple(ndata.get("children", [])),
                 source_hash=ndata.get("source_hash"),
                 doc_hash=ndata.get("doc_hash"),
                 doc_path=ndata.get("doc_path"),

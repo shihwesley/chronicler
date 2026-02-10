@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class LLMError(Exception):
@@ -25,8 +25,8 @@ class LLMConfig(BaseModel):
 
     provider: Literal["anthropic", "openai", "google", "ollama", "auto"]
     model: str
-    max_tokens: int = 4096
-    temperature: float = 0.3
+    max_tokens: int = Field(default=4096, gt=0)
+    temperature: float = Field(default=0.3, ge=0.0, le=2.0)
     api_key: str | None = None
     base_url: str | None = None
 
