@@ -3,13 +3,14 @@ from typing import Literal
 
 
 class LLMConfig(BaseModel):
-    provider: Literal["anthropic", "openai", "google"] = "anthropic"
+    provider: Literal["anthropic", "openai", "google", "ollama", "auto"] = "anthropic"
     model: str = "claude-sonnet-4-20250514"
     api_key_env: str = "ANTHROPIC_API_KEY"
     max_tokens: int = 4096
     timeout: int = 60
     max_retries: int = 3
     retry_delay: float = 1.0
+    base_url: str | None = None
 
 
 class QueueConfig(BaseModel):
