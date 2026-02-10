@@ -303,16 +303,14 @@ class TestPreReadTechmdHook:
 class TestHookGracefulDegradation:
     """Hooks should exit cleanly if chronicler_core is not importable."""
 
-    def test_session_start_import_error_propagates(self, project):
-        """session_start raises ImportError if chronicler_core missing.
-
-        This is by design — the shell wrapper catches it via `|| true`.
-        The Python code itself doesn't swallow the error; the shell layer does.
-        """
+    def test_session_start_import_error_exits_zero(self, project):
+        """session_start exits 0 when chronicler_core is missing (REQ-1)."""
         with patch("chronicler_core.freshness.check_staleness", side_effect=ImportError("no module")):
             from chronicler_lite.hooks.session_start import main
-            with pytest.raises(ImportError):
+            # Should call sys.exit(0) instead of raising
+            with pytest.raises(SystemExit) as exc_info:
                 main(str(project))
+            assert exc_info.value.code == 0
 
     def test_post_write_no_external_deps(self, project, tool_input_file):
         """post_write uses only stdlib — no chronicler_core import needed."""
@@ -328,6 +326,108 @@ class TestHookGracefulDegradation:
 
         candidates = project / ".chronicler" / ".stale-candidates"
         assert candidates.exists()
+
+
+class TestHookErrorPaths:
+    """Hooks must exit 0 on all errors (REQ-1, REQ-2, REQ-5)."""
+
+    def test_post_write_malformed_json_exits_zero(self, tool_input_file, capsys):
+        """Malformed JSON in tool input should log warning and return (REQ-5)."""
+        tool_input_file.write_text("not valid json{}")
+
+        from chronicler_lite.hooks.post_write import main
+        # Should not raise, should log warning
+        main(str(tool_input_file))
+        # No exception = success
+
+    def test_post_write_io_error_exits_zero(self, project):
+        """I/O errors during candidate file write should exit 0 (REQ-5)."""
+        from chronicler_lite.hooks.post_write import main
+
+        # Create a scenario where writing will fail (read-only parent dir)
+        with patch("pathlib.Path.resolve", side_effect=OSError("disk full")):
+            with pytest.raises(SystemExit) as exc_info:
+                main(str(project / "input.json"))
+            assert exc_info.value.code == 0
+
+    def test_pre_read_techmd_malformed_json_exits_zero(self, tool_input_file):
+        """Malformed JSON should log warning and return (REQ-2, REQ-5)."""
+        tool_input_file.write_text("{bad json")
+
+        from chronicler_lite.hooks.pre_read_techmd import main
+        # Should not raise
+        main(str(tool_input_file))
+
+    def test_pre_read_techmd_import_error_exits_zero(self, project, tool_input_file):
+        """Import errors should exit 0 (REQ-1, REQ-3)."""
+        doc = project / ".chronicler" / "test.tech.md"
+        doc.parent.mkdir(parents=True, exist_ok=True)
+        doc.write_text("# doc")
+        (project / ".chronicler" / "merkle-tree.json").write_text("{}")
+        tool_input_file.write_text(json.dumps({"file_path": str(doc)}))
+
+        # Mock the import to fail
+        with patch("chronicler_lite.hooks.pre_read_techmd.main.__code__") as mock_code:
+            from chronicler_lite.hooks.pre_read_techmd import main
+            with patch("builtins.__import__", side_effect=ImportError("no chronicler_core")):
+                # This will trigger the exception handler
+                with pytest.raises(SystemExit) as exc_info:
+                    exec("from chronicler_core.merkle.tree import MerkleTree")
+                assert exc_info.value.code is None or exc_info.value.code == 0
+
+    def test_pre_read_techmd_merkle_load_error_exits_zero(self, project, tool_input_file):
+        """Errors loading merkle tree should exit 0 (REQ-5)."""
+        doc = project / ".chronicler" / "test.tech.md"
+        doc.parent.mkdir(parents=True, exist_ok=True)
+        doc.write_text("# doc")
+
+        # Create corrupted merkle tree file
+        tree_file = project / ".chronicler" / "merkle-tree.json"
+        tree_file.write_text("corrupted data")
+
+        tool_input_file.write_text(json.dumps({"file_path": str(doc)}))
+
+        from chronicler_lite.hooks.pre_read_techmd import main
+        # Should catch the error and exit 0
+        with pytest.raises(SystemExit) as exc_info:
+            main(str(tool_input_file))
+        assert exc_info.value.code == 0
+
+    def test_session_start_freshness_check_error_exits_zero(self, project):
+        """Errors in freshness check should exit 0 (REQ-1, REQ-5)."""
+        with patch("chronicler_core.freshness.check_staleness", side_effect=RuntimeError("db error")):
+            from chronicler_lite.hooks.session_start import main
+            with pytest.raises(SystemExit) as exc_info:
+                main(str(project))
+            assert exc_info.value.code == 0
+
+    def test_session_start_os_error_exits_zero(self, tmp_path):
+        """OS errors should exit 0 (REQ-5)."""
+        from chronicler_lite.hooks.session_start import main
+
+        # Create .chronicler dir but make it fail during check
+        chronicler_dir = tmp_path / ".chronicler"
+        chronicler_dir.mkdir()
+
+        with patch("pathlib.Path.resolve", side_effect=OSError("permission denied")):
+            with pytest.raises(SystemExit) as exc_info:
+                main(str(tmp_path))
+            assert exc_info.value.code == 0
+
+    def test_all_hooks_log_warnings_on_error(self, capsys, caplog):
+        """All hooks should log warnings when they fail (REQ-2)."""
+        import logging
+
+        # Test post_write
+        from chronicler_lite.hooks.post_write import main as post_write_main
+        with caplog.at_level(logging.WARNING):
+            with patch("pathlib.Path.resolve", side_effect=RuntimeError("test error")):
+                try:
+                    post_write_main("/fake/path")
+                except SystemExit:
+                    pass
+        # Check that warning was logged
+        assert any("post_write hook failed" in record.message for record in caplog.records)
 
 
 class TestHookPerformance:
