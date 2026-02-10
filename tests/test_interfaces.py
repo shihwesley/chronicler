@@ -15,8 +15,6 @@ from chronicler_core.interfaces import (
     Permission,
     QueuePlugin,
     RBACPlugin,
-    RenderFormat,
-    RendererPlugin,
     SearchResult,
     StoragePlugin,
 )
@@ -39,20 +37,6 @@ class TestJobStatusEnum:
 
     def test_string_values(self):
         for member in JobStatus:
-            assert member.value == member.name
-
-
-class TestRenderFormatEnum:
-    def test_members(self):
-        assert set(RenderFormat) == {
-            RenderFormat.svg,
-            RenderFormat.png,
-            RenderFormat.ascii,
-            RenderFormat.html,
-        }
-
-    def test_string_values(self):
-        for member in RenderFormat:
             assert member.value == member.name
 
 
@@ -201,14 +185,6 @@ class DummyStorage:
         return {}
 
 
-class DummyRenderer:
-    def render(self, source: str, format: RenderFormat) -> str:
-        return ""
-
-    def supported_types(self) -> list[str]:
-        return ["mermaid"]
-
-
 class TestProtocolSubtyping:
     def test_queue_protocol(self):
         assert isinstance(DummyQueue(), QueuePlugin)
@@ -221,9 +197,6 @@ class TestProtocolSubtyping:
 
     def test_storage_protocol(self):
         assert isinstance(DummyStorage(), StoragePlugin)
-
-    def test_renderer_protocol(self):
-        assert isinstance(DummyRenderer(), RendererPlugin)
 
     def test_non_conforming_rejected(self):
         """An object missing required methods should not match the Protocol."""

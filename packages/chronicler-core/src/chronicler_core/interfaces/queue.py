@@ -42,8 +42,8 @@ class Job(BaseModel):
 
 
 @runtime_checkable
-class QueuePlugin(Protocol):
-    """Async job queue used by the orchestrator."""
+class BasicQueue(Protocol):
+    """Core queue operations: enqueue, dequeue, ack, nack."""
 
     def enqueue(self, job: Job) -> str: ...
 
@@ -53,4 +53,20 @@ class QueuePlugin(Protocol):
 
     def nack(self, job_id: str, reason: str) -> None: ...
 
+
+@runtime_checkable
+class DeadLetterQueue(Protocol):
+    """Access to jobs that exhausted their retry budget."""
+
     def dead_letters(self) -> list[Job]: ...
+
+
+@runtime_checkable
+class QueuePlugin(BasicQueue, DeadLetterQueue, Protocol):
+    """Full queue with both basic operations and dead-letter access.
+
+    Kept for backward compatibility. New code should depend on BasicQueue
+    or DeadLetterQueue individually where possible.
+    """
+
+    ...
