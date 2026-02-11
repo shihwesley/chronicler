@@ -12,3 +12,6 @@ dependencies = [
     "memvid-sdk>=2.0.0",
     "pyyaml",
 ]
+
+[project.optional-dependencies]
+test = ["pytest", "pytest-asyncio", "watchdog"]

@@ -19,6 +19,8 @@ DEFAULT_IGNORE = {
     "dist",
     "__pycache__",
     ".venv",
+    ".worktrees",
+    ".tox",
 }
 
 

@@ -106,25 +106,33 @@ def install_hooks(project_path: Path) -> None:
 
 def main(project_path: str | None = None) -> None:
     root = Path(project_path or ".").resolve()
-    print(f"Chronicler init: {root}\n")
 
-    # 1. Detect project type
-    lang = detect_project_type(root)
-    if lang:
-        print(f"  Detected project type: {lang}")
-    else:
-        print(f"  Could not auto-detect project type (using defaults)")
+    try:
+        print(f"Chronicler init: {root}\n")
 
-    # 2. Generate config
-    generate_config(root)
+        # 1. Detect project type
+        lang = detect_project_type(root)
+        if lang:
+            print(f"  Detected project type: {lang}")
+        else:
+            print(f"  Could not auto-detect project type (using defaults)")
 
-    # 3. Build merkle tree
-    build_merkle(root)
+        # 2. Generate config
+        generate_config(root)
 
-    # 4. Install hooks
-    install_hooks(root)
+        # 3. Build merkle tree
+        build_merkle(root)
 
-    print(f"\nDone. Run `/chronicler status` to check freshness.")
+        # 4. Install hooks
+        install_hooks(root)
+
+        print(f"\nDone. Run `/chronicler status` to check freshness.")
+    except FileNotFoundError:
+        print(f"Error: directory not found: {root}", file=sys.stderr)
+        sys.exit(1)
+    except PermissionError:
+        print(f"Error: permission denied: {root}", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

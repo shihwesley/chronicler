@@ -17,3 +17,6 @@ dependencies = [
     "pyyaml",
     "markitdown[pdf,docx,pptx]",
 ]
+
+[project.optional-dependencies]
+test = ["pytest", "pytest-asyncio", "watchdog"]
