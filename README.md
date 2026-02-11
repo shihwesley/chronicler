@@ -145,9 +145,11 @@ Chronicler is a Claude Code plugin. Install it once, and it hooks into every Cla
 
 ### Install as Claude Code plugin
 
-```bash
-claude plugin marketplace add shihwesley/chronicler
-claude plugin install chronicler
+Inside a Claude Code session:
+
+```
+/plugin marketplace add shihwesley/chronicler
+/plugin install chronicler
 ```
 
 This registers the Chronicler marketplace and installs the plugin at user scope. Hooks for SessionStart, PostToolUse (Write/Edit), and PreToolUse (Read) are registered automatically.
@@ -198,9 +200,11 @@ Config resolution order: CLI flag (`--config`) > `./chronicler.yaml` > `~/.chron
 
 ### Update
 
-```bash
-claude plugin marketplace update shihwesley-chronicler
-claude plugin update chronicler
+Inside a Claude Code session:
+
+```
+/plugin marketplace update shihwesley-chronicler
+/plugin update chronicler
 ```
 
 Restart Claude Code after updating for changes to take effect.
