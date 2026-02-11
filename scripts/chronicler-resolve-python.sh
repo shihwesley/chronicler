@@ -9,6 +9,12 @@
 #   3. ~/.chronicler/.venv/bin/python3 (auto-bootstrapped for plugin installs)
 #   4. System python3 (if user pip-installed chronicler-lite globally)
 
+# Auto-detect CLAUDE_PLUGIN_ROOT from script location if not set.
+# Scripts live in $PLUGIN_ROOT/scripts/, so parent dir is the root.
+if [ -z "${CLAUDE_PLUGIN_ROOT:-}" ]; then
+  CLAUDE_PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+fi
+
 CHRONICLER_HOME="${HOME}/.chronicler"
 CHRONICLER_VENV="${CHRONICLER_HOME}/.venv"
 
