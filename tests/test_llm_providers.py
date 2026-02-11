@@ -12,7 +12,7 @@ from chronicler_core.llm import create_llm_provider
 from chronicler_core.llm.auto_detect import auto_detect_provider
 from chronicler_core.llm.claude import ClaudeProvider
 from chronicler_core.llm.gemini import GeminiProvider
-from chronicler_core.llm.models import LLMConfig, LLMResponse, TokenUsage
+from chronicler_core.llm.models import LLMConfig, LLMError, LLMResponse, TokenUsage
 from chronicler_core.llm.ollama import OllamaProvider
 from chronicler_core.llm.openai_adapter import OpenAIProvider
 
@@ -181,7 +181,6 @@ class TestGeminiProviderGenerate:
     @pytest.mark.asyncio
     @patch("chronicler_core.llm.gemini.genai")
     async def test_generate_returns_response(self, mock_genai):
-        # Set up the mock model and its async generate call
         mock_usage = MagicMock()
         mock_usage.prompt_token_count = 15
         mock_usage.candidates_token_count = 42
@@ -190,9 +189,9 @@ class TestGeminiProviderGenerate:
         mock_response.text = "Hello from Gemini"
         mock_response.usage_metadata = mock_usage
 
-        mock_model = MagicMock()
-        mock_model.generate_content_async = AsyncMock(return_value=mock_response)
-        mock_genai.GenerativeModel.return_value = mock_model
+        mock_client = MagicMock()
+        mock_client.aio.models.generate_content = AsyncMock(return_value=mock_response)
+        mock_genai.Client.return_value = mock_client
 
         config = LLMConfig(provider="google", model="gemini-2.0-flash", api_key="fake")
         provider = GeminiProvider(config)
@@ -211,12 +210,12 @@ class TestGeminiProviderGenerate:
         mock_response = MagicMock()
         mock_response.text = ""
 
-        mock_model = MagicMock()
-        mock_model.generate_content_async = AsyncMock(return_value=mock_response)
-        mock_genai.GenerativeModel.return_value = mock_model
+        mock_client = MagicMock()
+        mock_client.aio.models.generate_content = AsyncMock(return_value=mock_response)
+        mock_genai.Client.return_value = mock_client
 
         config = LLMConfig(provider="google", model="gemini-2.0-flash", api_key="fake")
         provider = GeminiProvider(config)
 
-        with pytest.raises(ValueError, match="No text content in Gemini response"):
+        with pytest.raises(LLMError, match="No text content in Gemini response"):
             await provider.generate("sys", "usr")

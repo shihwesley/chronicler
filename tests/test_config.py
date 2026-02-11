@@ -54,7 +54,7 @@ class TestChroniclerConfigDefaults:
 class TestLLMSettings:
     def test_defaults(self):
         cfg = LLMSettings()
-        assert cfg.model == "claude-sonnet-4-20250514"
+        assert cfg.model == "claude-haiku-4-5-20251001"
         assert cfg.max_tokens == 4096
         assert cfg.timeout == 60
         assert cfg.max_retries == 3

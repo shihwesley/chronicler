@@ -70,8 +70,26 @@ def build_merkle(project_path: Path) -> MerkleTree:
     return tree
 
 
+def _deploy_hook_scripts() -> None:
+    """Copy bundled shell scripts to ~/.claude/hooks/chronicler/."""
+    scripts_dir = Path(__file__).resolve().parent.parent / "hooks" / "scripts"
+    target_dir = Path.home() / ".claude" / "hooks" / "chronicler"
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    import shutil
+    import stat
+
+    for script in scripts_dir.glob("*.sh"):
+        dest = target_dir / script.name
+        shutil.copy2(script, dest)
+        dest.chmod(dest.stat().st_mode | stat.S_IEXEC)
+
+
 def install_hooks(project_path: Path) -> None:
-    """Merge chronicler hooks into .claude/settings.json without clobbering existing hooks."""
+    """Deploy hook scripts and merge chronicler hooks into .claude/settings.json."""
+    # Copy shell scripts to ~/.claude/hooks/chronicler/
+    _deploy_hook_scripts()
+
     settings_path = project_path / ".claude" / "settings.json"
     settings_path.parent.mkdir(parents=True, exist_ok=True)
 

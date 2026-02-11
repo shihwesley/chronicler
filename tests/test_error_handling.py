@@ -11,7 +11,7 @@ import pytest
 import yaml
 from anthropic import APIError as AnthropicAPIError
 from anthropic import RateLimitError as AnthropicRateLimitError
-from google.api_core.exceptions import GoogleAPIError, ResourceExhausted
+
 from openai import APIError as OpenAIAPIError
 from openai import RateLimitError as OpenAIRateLimitError
 
@@ -116,12 +116,13 @@ async def test_openai_provider_marks_rate_limit_retryable():
 
 @pytest.mark.asyncio
 async def test_gemini_provider_wraps_api_error():
-    """Gemini adapter wraps GoogleAPIError in LLMError."""
+    """Gemini adapter wraps exceptions in LLMError."""
     config = LLMConfig(provider="google", model="test", api_key="test")
     provider = GeminiProvider(config)
 
     with patch.object(
-        provider._model, "generate_content_async", side_effect=GoogleAPIError("test")
+        provider._client.aio.models, "generate_content",
+        new=AsyncMock(side_effect=RuntimeError("connection failed")),
     ):
         with pytest.raises(LLMError) as exc_info:
             await provider.generate("system", "user")
@@ -132,13 +133,14 @@ async def test_gemini_provider_wraps_api_error():
 
 
 @pytest.mark.asyncio
-async def test_gemini_provider_marks_resource_exhausted_retryable():
-    """Gemini adapter marks ResourceExhausted as retryable."""
+async def test_gemini_provider_marks_rate_limit_retryable():
+    """Gemini adapter marks 429 errors as retryable."""
     config = LLMConfig(provider="google", model="test", api_key="test")
     provider = GeminiProvider(config)
 
     with patch.object(
-        provider._model, "generate_content_async", side_effect=ResourceExhausted("quota")
+        provider._client.aio.models, "generate_content",
+        new=AsyncMock(side_effect=RuntimeError("429 Resource exhausted")),
     ):
         with pytest.raises(LLMError) as exc_info:
             await provider.generate("system", "user")

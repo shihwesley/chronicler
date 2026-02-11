@@ -545,6 +545,43 @@
 
 ---
 
+## Session: 2026-02-10 (Post-Hardening Polish)
+
+### Phase 1: Bug Fixes
+- **Status:** completed
+- **Dispatch:** 3 parallel agents (classic mode)
+- **Commit:** `a6d6b0b` (merged: `b0dfd02`)
+- **Changes:** .worktrees exclusion in merkle, error handling in init/status, test deps in pyproject.toml
+
+### Phase 2: VS Code Extension Polish
+- **Status:** completed
+- **Dispatch:** 1 agent (classic mode)
+- **Commit:** `3da3197` (merged: `8309bc3`)
+- **Changes:** .vscodeignore, LICENSE, repository field added
+
+### Phase 3: LLM Improvements
+- **Status:** completed
+- **Dispatch:** 3 parallel agents (classic mode), finisher resumed after context overflow
+- **Tests:** 579 passed, 2 skipped, 1 pre-existing failure (ServiceBus)
+- **Review:** 1 P0 found (Gemini streaming broken — used generate_content instead of generate_content_stream), fixed
+- **Commit:** `5fd9c68` (merged)
+- **Changes:**
+  - Migrated google-generativeai → google-genai SDK (new Client API, proper async streaming)
+  - Added prompt caching with cache_control ephemeral on Claude system messages
+  - Default model changed to claude-haiku-4-5-20251001 (cost optimization)
+  - Word count validation on drafter output (warn >1500 words)
+
+## 5-Question Reboot Check
+| Question | Answer |
+|----------|--------|
+| Where am I? | Post-hardening polish complete. All 3 phases merged. |
+| Where am I going? | Ship or next feature work |
+| What's the goal? | Fix review findings + modernize LLM integrations |
+| What have I learned? | google-genai SDK uses generate_content_stream for async streaming (not a flag) |
+| What have I done? | 3 phases: bug fixes, VS Code polish, LLM improvements. 579 tests passing. |
+
+---
+
 ## Next Session
 
 **Design docs (11 total):**
