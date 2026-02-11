@@ -1,7 +1,6 @@
 ---
-name: status
 description: Show documentation freshness report — fresh, stale, uncovered, orphaned
-allowed-tools: ["Bash"]
+allowed-tools: Bash
 ---
 
 # Chronicler Status

@@ -1,7 +1,6 @@
 ---
-name: regenerate
 description: Regenerate stale .tech.md documentation
-allowed-tools: ["Bash", "Read", "Write", "Edit", "Glob", "Grep"]
+allowed-tools: Bash, Read, Write, Edit, Glob, Grep
 ---
 
 # Chronicler Regenerate

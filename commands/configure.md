@@ -1,7 +1,6 @@
 ---
-name: configure
 description: Update chronicler.yaml settings with key=value pairs
-allowed-tools: ["Bash"]
+allowed-tools: Bash
 ---
 
 # Chronicler Configure

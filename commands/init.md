@@ -1,7 +1,6 @@
 ---
-name: init
 description: First-time project setup — detects language, generates config, builds merkle tree, generates initial docs
-allowed-tools: ["Bash", "Read", "Write", "Edit", "Glob", "Grep"]
+allowed-tools: Bash, Read, Write, Edit, Glob, Grep
 ---
 
 # Chronicler Init
