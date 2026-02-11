@@ -1,0 +1,12 @@
+{
+  "name": "shihwesley-chronicler",
+  "description": "Chronicler plugin marketplace",
+  "plugins": [
+    {
+      "name": "chronicler",
+      "version": "0.0.1",
+      "description": "Ambient .tech.md generation — auto-documents and tracks freshness of your codebase",
+      "path": "."
+    }
+  ]
+}
