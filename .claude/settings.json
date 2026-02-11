@@ -1,0 +1,21 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "command": "~/.claude/hooks/chronicler/session-start.sh"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "command": "~/.claude/hooks/chronicler/post-write.sh"
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Read",
+        "command": "~/.claude/hooks/chronicler/pre-read-techmd.sh"
+      }
+    ]
+  }
+}

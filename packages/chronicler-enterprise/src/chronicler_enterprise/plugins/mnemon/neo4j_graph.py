@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from chronicler_core.interfaces.graph import GraphEdge, GraphNode
 from chronicler_core.interfaces.storage import StoragePlugin
@@ -56,6 +59,9 @@ class Neo4jGraph:
             )
 
     def neighbors(self, node_id: str, depth: int = 1) -> list[GraphNode]:
+        if not isinstance(depth, int) or depth < 1:
+            raise ValueError(f"depth must be a positive integer, got {depth!r}")
+        depth = min(depth, 10)
         query = (
             f"MATCH (n:Component {{id: $id}})-[*1..{depth}]-(m:Component) "
             "RETURN DISTINCT m"
@@ -76,9 +82,9 @@ class Neo4jGraph:
                 for r in result
             ]
 
-    def query(self, expression: str) -> list[dict]:
+    def query(self, expression: str, parameters: dict[str, Any] | None = None) -> list[dict]:
         with self._driver.session(database=self._database) as session:
-            result = session.run(expression)
+            result = session.run(expression, parameters=parameters or {})
             return [dict(record) for record in result]
 
     # -- Mnemon sync -----------------------------------------------------------

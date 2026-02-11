@@ -28,11 +28,11 @@ Note: A, B, C are independent of each other. D depends on C (error patterns info
 
 | Phase | Sprint | Spec | Description | Findings | Status |
 |-------|--------|------|-------------|----------|--------|
-| 1 | 1 | hook-safety-spec | Top-level exception guards + warning logging in all 3 hooks | P0 #1, #2 | pending |
-| 1 | 1 | security-hardening-spec | Path traversal, SSRF, command injection, env var leak | P1 #4-7, P2 #18, #24 | pending |
-| 1 | 1 | error-handling-spec | LLM error wrapping, file I/O guards, silent failures, config | P1 #8-13, #17, P2 #28 | pending |
-| 1 | 2 | type-invariants-spec | Mutable defaults, Field validators, model renames, frontmatter schema | P0 #3, P1 #15-16, P2 #25-27 | pending |
-| 2 | 1 | architecture-cleanup-spec | SRP refactors, OCP/ISP fixes, dead code removal | P1 #14, P2 #19-23, #29, P3 #30-34 | pending |
+| 1 | 1 | hook-safety-spec | Top-level exception guards + warning logging in all 3 hooks | P0 #1, #2 | completed |
+| 1 | 1 | security-hardening-spec | Path traversal, SSRF, command injection, env var leak | P1 #4-7, P2 #18, #24 | completed |
+| 1 | 1 | error-handling-spec | LLM error wrapping, file I/O guards, silent failures, config | P1 #8-13, #17, P2 #28 | completed |
+| 1 | 2 | type-invariants-spec | Mutable defaults, Field validators, model renames, frontmatter schema | P0 #3, P1 #15-16, P2 #25-27 | completed |
+| 2 | 1 | architecture-cleanup-spec | SRP refactors, OCP/ISP fixes, dead code removal | P1 #14, P2 #19-23, #29, P3 #30-34 | completed |
 
 ## Spec Files
 

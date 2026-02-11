@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 import json
+import logging
 from datetime import UTC, datetime
 
 import boto3
 
 from chronicler_core.interfaces.queue import Job, JobStatus
+
+from ._serialization import attrs_to_job, job_to_attrs
+
+logger = logging.getLogger(__name__)
 
 
 class SQSQueue:
@@ -16,8 +21,6 @@ class SQSQueue:
     Uses SQS message attributes to carry job metadata (status, timestamps,
     attempts). The message body holds the JSON-serialized payload.
     """
-
-    MAX_ATTEMPTS = 3
 
     def __init__(
         self,
@@ -36,43 +39,23 @@ class SQSQueue:
 
     @staticmethod
     def _job_to_message(job: Job) -> dict:
+        attrs = job_to_attrs(job)
+        # SQS wraps each attribute in DataType/StringValue
+        sqs_attrs = {}
+        for key, val in attrs.items():
+            dtype = "Number" if key == "attempts" else "String"
+            sqs_attrs[key] = {"DataType": dtype, "StringValue": val}
         return {
             "MessageBody": json.dumps(job.payload),
-            "MessageAttributes": {
-                "job_id": {"DataType": "String", "StringValue": job.id},
-                "status": {"DataType": "String", "StringValue": job.status.value},
-                "created_at": {
-                    "DataType": "String",
-                    "StringValue": job.created_at.isoformat(),
-                },
-                "updated_at": {
-                    "DataType": "String",
-                    "StringValue": job.updated_at.isoformat(),
-                },
-                "attempts": {
-                    "DataType": "Number",
-                    "StringValue": str(job.attempts),
-                },
-                "error": {
-                    "DataType": "String",
-                    "StringValue": job.error or "",
-                },
-            },
+            "MessageAttributes": sqs_attrs,
         }
 
     @staticmethod
     def _message_to_job(msg: dict) -> Job:
-        attrs = msg["MessageAttributes"]
-        error = attrs["error"]["StringValue"]
-        return Job(
-            id=attrs["job_id"]["StringValue"],
-            payload=json.loads(msg["Body"]),
-            status=JobStatus(attrs["status"]["StringValue"]),
-            created_at=datetime.fromisoformat(attrs["created_at"]["StringValue"]),
-            updated_at=datetime.fromisoformat(attrs["updated_at"]["StringValue"]),
-            error=error if error else None,
-            attempts=int(attrs["attempts"]["StringValue"]),
-        )
+        raw = msg["MessageAttributes"]
+        # Unwrap SQS DataType/StringValue back to flat dict
+        attrs = {k: v["StringValue"] for k, v in raw.items()}
+        return attrs_to_job(attrs, json.loads(msg["Body"]))
 
     # -- QueuePlugin protocol -------------------------------------------------
 
@@ -113,28 +96,28 @@ class SQSQueue:
         )
 
     def nack(self, job_id: str, reason: str) -> None:
+        logger.warning("nack job=%s reason=%s", job_id, reason)
         receipt = self._receipts.pop(job_id, None)
         if receipt is None:
             return
 
-        # Re-enqueue with incremented attempt count
-        # First, make the original message visible again so SQS reclaims it
         self._client.change_message_visibility(
             QueueUrl=self._queue_url,
             ReceiptHandle=receipt,
             VisibilityTimeout=0,
         )
 
-    def dead_letters(self) -> list[Job]:
+    def dead_letters(self, max_results: int = 1000) -> list[Job]:
         if not self._dlq_url:
             return []
 
         jobs: list[Job] = []
-        while True:
+        while len(jobs) < max_results:
+            batch_size = min(10, max_results - len(jobs))
             resp = self._client.receive_message(
                 QueueUrl=self._dlq_url,
                 MessageAttributeNames=["All"],
-                MaxNumberOfMessages=10,
+                MaxNumberOfMessages=batch_size,
                 WaitTimeSeconds=0,
             )
             messages = resp.get("Messages", [])

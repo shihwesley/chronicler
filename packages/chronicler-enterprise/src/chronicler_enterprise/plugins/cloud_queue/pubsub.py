@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 import json
+import logging
 from datetime import UTC, datetime
 
 from google.cloud import pubsub_v1
 
 from chronicler_core.interfaces.queue import Job, JobStatus
+
+from ._serialization import attrs_to_job, job_to_attrs
+
+logger = logging.getLogger(__name__)
 
 
 class PubSubQueue:
@@ -28,38 +33,21 @@ class PubSubQueue:
         # ack_id cache: job_id -> ack_id
         self._ack_ids: dict[str, str] = {}
 
+    def close(self) -> None:
+        self._publisher.transport.close()
+        self._subscriber.close()
+
     # -- serialization helpers ------------------------------------------------
 
     @staticmethod
-    def _job_to_attrs(job: Job) -> dict[str, str]:
-        return {
-            "job_id": job.id,
-            "status": job.status.value,
-            "created_at": job.created_at.isoformat(),
-            "updated_at": job.updated_at.isoformat(),
-            "attempts": str(job.attempts),
-            "error": job.error or "",
-        }
-
-    @staticmethod
     def _message_to_job(msg) -> Job:
-        attrs = msg.attributes
-        error = attrs["error"]
-        return Job(
-            id=attrs["job_id"],
-            payload=json.loads(msg.data.decode("utf-8")),
-            status=JobStatus(attrs["status"]),
-            created_at=datetime.fromisoformat(attrs["created_at"]),
-            updated_at=datetime.fromisoformat(attrs["updated_at"]),
-            error=error if error else None,
-            attempts=int(attrs["attempts"]),
-        )
+        return attrs_to_job(dict(msg.attributes), json.loads(msg.data.decode("utf-8")))
 
     # -- QueuePlugin protocol -------------------------------------------------
 
     def enqueue(self, job: Job) -> str:
         data = json.dumps(job.payload).encode("utf-8")
-        attrs = self._job_to_attrs(job)
+        attrs = job_to_attrs(job)
         self._publisher.publish(self._topic_path, data=data, **attrs)
         return job.id
 
@@ -88,6 +76,7 @@ class PubSubQueue:
         )
 
     def nack(self, job_id: str, reason: str) -> None:
+        logger.warning("nack job=%s reason=%s", job_id, reason)
         ack_id = self._ack_ids.pop(job_id, None)
         if ack_id is None:
             return

@@ -359,7 +359,7 @@ class TestServiceBusQueue:
             "attempts": "0",
             "error": "",
         }
-        raw_msg.__str__ = lambda self: json.dumps(job.payload)
+        raw_msg.body = json.dumps(job.payload)
         sb._mock_receiver.receive_messages.return_value = [raw_msg]
 
         got = sb.dequeue()

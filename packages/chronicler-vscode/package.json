@@ -165,7 +165,7 @@
     "test:unit": "vitest run"
   },
   "devDependencies": {
-    "@types/node": "^18.0.0",
+    "@types/node": "^20.0.0",
     "@types/vscode": "^1.85.0",
     "@vscode/test-electron": "^2.3.0",
     "typescript": "^5.4.0",

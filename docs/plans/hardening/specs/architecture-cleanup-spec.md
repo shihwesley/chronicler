@@ -4,7 +4,7 @@ phase: 2
 sprint: 1
 parent: null
 depends_on: [error-handling-spec, type-invariants-spec]
-status: pending
+status: completed
 created: 2026-02-10
 severity: P2
 finding_count: 12

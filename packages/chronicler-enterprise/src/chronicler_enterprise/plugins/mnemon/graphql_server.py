@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
+
+logger = logging.getLogger(__name__)
 
 import strawberry
 
@@ -42,7 +45,8 @@ class Query:
     @strawberry.field
     def component(self, info: Info, id: str) -> Component | None:
         rows = _graph(info).query(
-            f"MATCH (n:Component {{id: '{id}'}}) RETURN n LIMIT 1"
+            "MATCH (n:Component {id: $id}) RETURN n LIMIT 1",
+            parameters={"id": id},
         )
         if not rows:
             return None
@@ -53,7 +57,8 @@ class Query:
     def components(self, info: Info, type: str | None = None) -> list[Component]:
         if type:
             rows = _graph(info).query(
-                f"MATCH (n:Component {{type: '{type}'}}) RETURN n"
+                "MATCH (n:Component {type: $type}) RETURN n",
+                parameters={"type": type},
             )
         else:
             rows = _graph(info).query("MATCH (n:Component) RETURN n")
@@ -66,8 +71,9 @@ class Query:
     def edges(self, info: Info, source: str | None = None) -> list[Edge]:
         if source:
             rows = _graph(info).query(
-                f"MATCH (a:Component {{id: '{source}'}})-[r:RELATES]->(b:Component) "
-                "RETURN a.id AS src, b.id AS tgt, r.relation AS rel"
+                "MATCH (a:Component {id: $source})-[r:RELATES]->(b:Component) "
+                "RETURN a.id AS src, b.id AS tgt, r.relation AS rel",
+                parameters={"source": source},
             )
         else:
             rows = _graph(info).query(
@@ -85,28 +91,32 @@ class Query:
 
     @strawberry.field
     def blast_radius(self, info: Info, component_id: str, depth: int = 2) -> list[BlastRadiusResult]:
-        # Walk neighbors at each depth level so we can tag the hop distance
-        results: list[BlastRadiusResult] = []
-        seen: set[str] = set()
-        for d in range(1, depth + 1):
-            nodes = _graph(info).neighbors(component_id, depth=d)
-            for n in nodes:
-                if n.id not in seen:
-                    seen.add(n.id)
-                    results.append(
-                        BlastRadiusResult(
-                            component=Component(id=n.id, type=n.type, label=n.label),
-                            depth=d,
-                            relationship="affects",
-                        )
-                    )
-        return results
+        clamped = min(max(depth, 1), 10)
+        rows = _graph(info).query(
+            f"MATCH path = (n:Component {{id: $id}})-[*1..{clamped}]-(m:Component) "
+            "WHERE n <> m "
+            "WITH m, min(length(path)) AS hop "
+            "RETURN m, hop ORDER BY hop",
+            parameters={"id": component_id},
+        )
+        return [
+            BlastRadiusResult(
+                component=Component(
+                    id=r["m"]["id"],
+                    type=r["m"].get("type", ""),
+                    label=r["m"].get("label", ""),
+                ),
+                depth=r["hop"],
+                relationship="affects",
+            )
+            for r in rows
+        ]
 
 
 class GraphQLServer:
     """Thin wrapper that wires a strawberry schema to the Neo4jGraph instance."""
 
-    def __init__(self, graph: Neo4jGraph, host: str = "0.0.0.0", port: int = 4000):
+    def __init__(self, graph: Neo4jGraph, host: str = "127.0.0.1", port: int = 4000):
         self._graph = graph
         self._host = host
         self._port = port

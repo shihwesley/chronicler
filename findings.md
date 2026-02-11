@@ -230,7 +230,60 @@ Before implementing MemVid integration (Phase 5), agent MUST fetch and analyze:
 - MCP Server available for AI agent integration
 - .tech.md files work immediately in Obsidian with zero conversion
 
+### Beautiful Mermaid (2026-02-09)
+**Source:** https://github.com/lukilabs/beautiful-mermaid (6.8k stars, TypeScript, MIT)
+
+**What it is:** Lightweight TypeScript lib rendering Mermaid DSL → styled SVGs or ASCII/Unicode art. Built by the Craft team.
+
+**API:**
+```typescript
+import { renderMermaid, renderMermaidAscii, THEMES } from 'beautiful-mermaid'
+
+const svg = await renderMermaid(mermaidText, THEMES['tokyo-night'])  // → SVG string
+const ascii = renderMermaidAscii(mermaidText)  // → Unicode text (sync)
+```
+
+**Key properties:**
+| Property | Value |
+|----------|-------|
+| Diagram types | flowchart, stateDiagram-v2, sequenceDiagram, classDiagram, erDiagram |
+| Output | SVG string (inline CSS), ASCII/Unicode text |
+| Themes | 15 built-in (tokyo-night, catppuccin-mocha, nord, dracula, github-*, solarized-*, etc.) |
+| Theming | 2-color mono (bg+fg) + optional enrichment (line, accent, muted, surface, border) |
+| Dependencies | @dagrejs/dagre only (graph layout engine) |
+| Shiki compat | fromShikiTheme() converts any Shiki theme |
+| Performance | 100+ diagrams in <500ms |
+
+**Integration decision:** IDE/Obsidian layers only — .tech.md keeps raw Mermaid syntax for portability, VS Code extension (Phase 7d) and Obsidian plugin (Phase 8b) render with Beautiful Mermaid.
+
+### MemVid SDK v2 Research Update (2026-02-09)
+**Source:** PyPI memvid-sdk v2.0.156 (Feb 7, 2026), Rust core + PyO3 bindings
+
+**Corrected API (v2 differs from design doc assumptions):**
+```python
+from memvid import Memvid
+
+mem = Memvid.create(path="file.mv2", kind="basic")   # NEW file
+mem = Memvid.use(kind="basic", path="file.mv2")      # EXISTING file
+
+frame_id = mem.put(text=content, title=doc_id, label="tech.md", metadata={...})
+results = mem.find(query, k=10, mode="auto")          # auto/lex/vec
+entity = mem.state("component-name")                   # O(1) SPO lookup
+mem.enrich()                                            # Auto-extract SPO triplets
+mem.add_memory_cards(cards)                            # Manual SPO insertion
+mem.commit()                                           # Persist changes
+```
+
+**Key differences from design doc:**
+- `Memvid.create()` / `Memvid.use()` not `create()` / `use()` (class methods, not module functions)
+- `mode="auto"` not `mode="hybrid"` (same behavior)
+- `mode="lex"` not `mode="lexical"` (abbreviated)
+- Embedding models: bge-small, bge-base, nomic, gte-large (local), openai-small/large (cloud)
+- Default: fastembed for local embeddings (zero API cost)
+
 ## Visual/Browser Findings
 <!-- Update after every 2 view/browser operations -->
 - Foam repo cloned and analyzed: architecture, features, VS Code API usage (2026-02-05)
 - Obsidian docs researched: vault structure, plugin API, Dataview, import mechanisms (2026-02-05)
+- Beautiful Mermaid: GitHub API + repo analysis — TypeScript lib, 15 themes, SVG/ASCII output (2026-02-09)
+- MemVid SDK v2: PyPI + docs research — stable v2.0.156, Rust+PyO3, corrected API surface (2026-02-09)

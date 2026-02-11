@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import logging
+
 from chronicler_core.interfaces.rbac import Permission, RBACPlugin
+
+logger = logging.getLogger(__name__)
 
 
 # Maps actions to minimum required role level.
@@ -26,13 +30,6 @@ class ChroniclerRBAC:
 
     SCOPES = {"internal", "confidential", "secret"}
 
-    # Scope tiers: higher number = more restricted
-    _SCOPE_LEVELS: dict[str, int] = {
-        "internal": 1,
-        "confidential": 2,
-        "secret": 3,
-    }
-
     # Minimum role level to access each scope tier
     _SCOPE_ACCESS: dict[str, int] = {
         "internal": 1,     # viewer+
@@ -40,12 +37,10 @@ class ChroniclerRBAC:
         "secret": 3,       # admin+
     }
 
-    def __init__(self, config_path: str | None = None) -> None:
+    def __init__(self) -> None:
         self._permissions: dict[str, list[Permission]] = {}
         self._roles: dict[str, str] = {}
         self._scopes: dict[str, str] = {}  # resource -> scope name
-        if config_path:
-            self._load_config(config_path)
 
     # -- Protocol methods ------------------------------------------------------
 
@@ -65,7 +60,9 @@ class ChroniclerRBAC:
             return False
 
         user_level = self.ROLE_HIERARCHY.get(role, 0)
-        required_level = _ACTION_LEVELS.get(permission.action, 0)
+        required_level = _ACTION_LEVELS.get(permission.action)
+        if required_level is None:
+            return False  # unknown actions are denied by default
 
         if user_level < required_level:
             return False
@@ -87,8 +84,9 @@ class ChroniclerRBAC:
 
     def revoke(self, user_id: str, permission: Permission) -> None:
         """Revoke a previously granted permission."""
-        perms = self._permissions.get(user_id, [])
-        self._permissions[user_id] = [p for p in perms if p != permission]
+        if user_id not in self._permissions:
+            return
+        self._permissions[user_id] = [p for p in self._permissions[user_id] if p != permission]
 
     def list_permissions(self, user_id: str) -> list[Permission]:
         """Return all directly-granted permissions for a user."""
@@ -121,7 +119,3 @@ class ChroniclerRBAC:
         read_perm = lambda res: Permission(resource=res, action="read")
         return [res for res in self._scopes if self.check(user_id, read_perm(res))]
 
-    # -- Config loading --------------------------------------------------------
-
-    def _load_config(self, config_path: str) -> None:
-        raise NotImplementedError("YAML config loading not yet implemented")

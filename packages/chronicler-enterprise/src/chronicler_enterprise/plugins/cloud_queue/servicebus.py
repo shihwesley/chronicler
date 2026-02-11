@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 import json
+import logging
 from datetime import UTC, datetime
 
 from azure.servicebus import ServiceBusClient, ServiceBusMessage
 
 from chronicler_core.interfaces.queue import Job, JobStatus
+
+from ._serialization import attrs_to_job, job_to_attrs
+
+logger = logging.getLogger(__name__)
 
 
 class ServiceBusQueue:
@@ -25,34 +30,22 @@ class ServiceBusQueue:
         # message cache: job_id -> ServiceBusReceivedMessage
         self._messages: dict[str, object] = {}
 
+    def close(self) -> None:
+        self._sender.close()
+        self._receiver.close()
+        self._client.close()
+
     # -- serialization helpers ------------------------------------------------
 
     @staticmethod
     def _job_to_message(job: Job) -> ServiceBusMessage:
         msg = ServiceBusMessage(json.dumps(job.payload))
-        msg.application_properties = {
-            "job_id": job.id,
-            "status": job.status.value,
-            "created_at": job.created_at.isoformat(),
-            "updated_at": job.updated_at.isoformat(),
-            "attempts": str(job.attempts),
-            "error": job.error or "",
-        }
+        msg.application_properties = job_to_attrs(job)
         return msg
 
     @staticmethod
     def _received_to_job(msg) -> Job:
-        props = msg.application_properties
-        error = props["error"]
-        return Job(
-            id=props["job_id"],
-            payload=json.loads(str(msg)),
-            status=JobStatus(props["status"]),
-            created_at=datetime.fromisoformat(props["created_at"]),
-            updated_at=datetime.fromisoformat(props["updated_at"]),
-            error=error if error else None,
-            attempts=int(props["attempts"]),
-        )
+        return attrs_to_job(dict(msg.application_properties), json.loads(str(msg.body)))
 
     # -- QueuePlugin protocol -------------------------------------------------
 
@@ -80,6 +73,7 @@ class ServiceBusQueue:
         self._receiver.complete_message(msg)
 
     def nack(self, job_id: str, reason: str) -> None:
+        logger.warning("nack job=%s reason=%s", job_id, reason)
         msg = self._messages.pop(job_id, None)
         if msg is None:
             return

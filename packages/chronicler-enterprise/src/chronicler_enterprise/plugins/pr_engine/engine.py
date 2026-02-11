@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from github import Github
     from chronicler_core.drafter.models import TechDoc
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -65,7 +68,11 @@ class PREngine:
             repo.update_file(
                 file_path, commit_msg, tech_doc.raw_content, contents.sha, branch=branch_name,
             )
-        except Exception:
+        except Exception as exc:
+            from github import UnknownObjectException
+
+            if not isinstance(exc, UnknownObjectException):
+                raise
             repo.create_file(file_path, commit_msg, tech_doc.raw_content, branch=branch_name)
 
         # Open PR
@@ -133,7 +140,11 @@ class PREngine:
                 repo.update_file(
                     file_path, commit_msg, doc.raw_content, contents.sha, branch=branch_name,
                 )
-            except Exception:
+            except Exception as exc:
+                from github import UnknownObjectException
+
+                if not isinstance(exc, UnknownObjectException):
+                    raise
                 repo.create_file(file_path, commit_msg, doc.raw_content, branch=branch_name)
 
         pr = repo.create_pull(

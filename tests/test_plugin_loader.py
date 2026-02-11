@@ -271,7 +271,7 @@ class _FakeGraph:
     def add_node(self, node): pass
     def add_edge(self, edge): pass
     def neighbors(self, node_id, depth=1): return []
-    def query(self, expression): return []
+    def query(self, expression, parameters=None): return []
 
 
 class _FakeStorage:

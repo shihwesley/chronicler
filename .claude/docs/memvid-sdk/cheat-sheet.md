@@ -9,7 +9,7 @@ Package: `memvid-sdk` on PyPI (v2.0.156, Rust core + PyO3 bindings)
 ## Core API
 
 ```python
-from memvid import Memvid
+from memvid_sdk import Memvid
 
 # Create new .mv2 file
 mem = Memvid.create(path="file.mv2", kind="basic")
@@ -18,7 +18,7 @@ mem = Memvid.create(path="file.mv2", kind="basic")
 mem = Memvid.use(kind="basic", path="file.mv2")
 
 # Alternative module-level convenience functions:
-# from memvid import create, use
+# from memvid_sdk import create, use
 # mem = create("file.mv2")
 # mem = use("basic", "file.mv2")
 ```

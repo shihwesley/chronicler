@@ -12,16 +12,48 @@ Speed - MVP approach, ship fast, iterate later
 - **Scope:** VCS Crawler + AI Drafter only (defer Metadata Harvester, PR Engine)
 
 ## Current Phase
-Phase 1 (Task #1)
+Phase 1.5 (Config System)
 
 ## Task Tracking
 Progress tracked via native Claude Code tasks (visible in UI):
-- **Task #1**: Phase 1: Project Setup
-- **Task #2**: Phase 2: VCS Crawler (blocked by #1)
-- **Task #3**: Phase 3: AI Drafter (blocked by #2)
-- **Task #4**: Phase 4: Output & Validation (blocked by #3)
+- ~~**Task #1**: Phase 1: Project Setup~~ ✅ completed
+- **Task #2**: Phase 1.5: Config System (blocked by #1)
+- **Task #3**: Phase 2a: VCS Crawler (blocked by #2)
+- **Task #4**: Phase 2b: Document Converter (blocked by #3)
+- **Task #5**: Phase 3: AI Drafter (blocked by #3, #4)
+- **Task #6**: Phase 4: Output & Validation (blocked by #5)
+- **Task #7**: Phase 4.5: Testing & CI (blocked by #6)
 
 Use `TaskList()` to check status, `TaskUpdate(taskId, status="in_progress/completed")` to update.
+
+## Revised Plan (from orchestration review)
+
+Changes from original plan:
+| Change | Reason |
+|--------|--------|
+| Phase 2 → split 2a/2b | VCS Crawler and Doc Converter are separate concerns |
+| Added Phase 1.5: Config System | `chronicler.yaml` + Pydantic validation is foundational |
+| Added Phase 4.5: Testing & CI | pytest fixtures + integration tests before major refactor |
+| Phases 5-9 flagged for future splitting | Each contains multiple sprints of work |
+
+### MVP Execution Plan (Phases 1–4.5)
+
+| Phase | Title | Tasks | Agent Type | Confidence | Status |
+|-------|-------|-------|-----------|------------|--------|
+| 1 | Project Setup | 4 | general-purpose | HIGH | ✅ Done |
+| 1.5 | Config System | 3 | general-purpose | HIGH | ✅ Done |
+| 2a | VCS Crawler | 4 | general-purpose | HIGH | ✅ Done |
+| 2b | Document Converter | 3 | general-purpose | MEDIUM | ✅ Done |
+| 3 | AI Drafter | 5 | general-purpose | MEDIUM | ✅ Done |
+| 4 | Output & Validation | 3 | general-purpose | HIGH | ✅ Done |
+| 4.5 | Testing & CI | 3 | general-purpose | HIGH | ✅ Done |
+
+### Post-MVP Phases (deferred, need further decomposition)
+- Phase 5a-d: Chronicler Lite (core extraction, SQLite, MemVid, CLI)
+- Phase 6a-e: Enterprise plugins (loader, queues, RBAC, Neo4j, PR Engine)
+- Phase 7a-d: VS Code Extension (TypeScript)
+- Phase 8a-b: Obsidian Integration (Python daemon + TS plugin)
+- Phase 9a-c: Cartographer + Merkle (codebase mapping + drift detection + blast radius)
 
 ## State Machine
 
@@ -73,34 +105,46 @@ stateDiagram-v2
 
 ## Phases
 
-### Phase 1: Project Setup (Task #1)
-- Init Python project (pyproject.toml, uv/poetry)
+### Phase 1: Project Setup ✅
+- Init Python project (pyproject.toml, hatchling)
 - Setup directory structure
-- Add GitHub API client (PyGithub)
-- Add Anthropic/OpenAI client for LLM
+- Add GitHub API client (PyGithub) — provider-agnostic VCS interface
+- Add Anthropic/OpenAI client for LLM — provider-agnostic LLM interface
 
-### Phase 2: VCS Crawler + Document Converter (Task #2)
-- GitHub auth (PAT or OAuth)
+### Phase 1.5: Config System ✅
+- Pydantic models for all config sections (LLMConfig, QueueConfig, VCSConfig, OutputConfig, MonorepoConfig, ChroniclerConfig)
+- YAML config loader with resolution order (CLI → env → project → user → defaults) + `${VAR}` env expansion
+- CLI integration: wire `--config` flag, export public API from `chronicler/config/`
+- See: `docs/plans/2026-01-23-config-design.md`
+
+### Phase 2a: VCS Crawler
+- GitHub auth (PAT via config)
 - List repos for org/user
 - Fetch repo metadata (languages, structure)
 - Tree traversal (identify key files: package.json, Dockerfile, etc.)
-- **Document conversion (MarkItDown integration):**
-  - Detect document files (PDF, DOCX, PPTX, images)
-  - Convert to markdown via MarkItDown
-  - Extract text from architecture diagrams (OCR)
-  - Cache converted content for LLM context
 
-### Phase 3: AI Drafter (Task #3)
+### Phase 2b: Document Converter
+- Detect document files (PDF, DOCX, PPTX, images)
+- Convert to markdown via MarkItDown
+- Extract text from architecture diagrams (OCR)
+- Cache converted content for LLM context
+
+### Phase 3: AI Drafter
 - Design prompt template for .tech.md generation
 - Parse repo context into LLM-friendly format
 - Generate YAML frontmatter from harvested metadata
 - Generate Architectural Intent section
 - Generate Connectivity Graph (infer from imports/deps)
 
-### Phase 4: Output & Validation (Task #4)
+### Phase 4: Output & Validation
 - Write .tech.md to `.chronicler/` directory (local)
 - Validate YAML schema compliance
 - Dry-run mode for testing
+
+### Phase 4.5: Testing & CI
+- pytest fixtures for VCS, LLM, and config mocking
+- Integration tests (end-to-end crawl → draft → validate)
+- CI pipeline setup
 
 ### Phase 5: Chronicler Lite (Task #5)
 - Extract core into `chronicler-core` package

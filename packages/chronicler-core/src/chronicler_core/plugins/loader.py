@@ -102,27 +102,27 @@ class PluginLoader:
         # No explicit name -- try Lite defaults
         return self._load_lite_default(plugin_type)
 
-    def load_queue(self, name: str | None = None) -> QueuePlugin:
+    def load_queue(self, name: str | None = None) -> type[QueuePlugin]:
         plugin_cls = self._load_plugin("queue", name)
         if plugin_cls is None:
             raise PluginNotFoundError("queue", name)
-        return plugin_cls
+        return plugin_cls  # type: ignore[return-value]
 
-    def load_graph(self, name: str | None = None) -> GraphPlugin:
+    def load_graph(self, name: str | None = None) -> type[GraphPlugin]:
         plugin_cls = self._load_plugin("graph", name)
         if plugin_cls is None:
             raise PluginNotFoundError("graph", name)
-        return plugin_cls
+        return plugin_cls  # type: ignore[return-value]
 
-    def load_storage(self, name: str | None = None) -> StoragePlugin:
+    def load_storage(self, name: str | None = None) -> type[StoragePlugin]:
         plugin_cls = self._load_plugin("storage", name)
         if plugin_cls is None:
             raise PluginNotFoundError("storage", name)
-        return plugin_cls
+        return plugin_cls  # type: ignore[return-value]
 
-    def load_rbac(self, name: str | None = None) -> RBACPlugin | None:
+    def load_rbac(self, name: str | None = None) -> type[RBACPlugin] | None:
         """Load RBAC plugin. Returns None if not found (RBAC is optional)."""
         try:
-            return self._load_plugin("rbac", name)
+            return self._load_plugin("rbac", name)  # type: ignore[return-value]
         except PluginNotFoundError:
             return None
