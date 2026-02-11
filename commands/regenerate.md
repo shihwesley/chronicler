@@ -1,17 +1,30 @@
 ---
 name: regenerate
-description: Force-regenerate documentation for stale files, or a specific path
-allowed-tools: ["Bash"]
+description: Regenerate stale .tech.md documentation
+allowed-tools: ["Bash", "Read", "Write", "Edit", "Glob", "Grep"]
 ---
 
 # Chronicler Regenerate
 
-Force-regenerate documentation. Without arguments, processes all stale files. With a path argument, targets just that file.
+Regenerate documentation for files whose source has changed since last scan.
 
-Run the regenerate module:
+## Step 1: Identify stale files
 
 ```bash
 ${CLAUDE_PLUGIN_ROOT}/scripts/chronicler-run.sh skill.regenerate $ARGUMENTS
 ```
 
-Without a configured LLM drafter, this reports which files are stale but doesn't rewrite them. Full regeneration requires a working LLM provider in `chronicler.yaml`.
+This prints which files are stale (source changed but docs haven't been updated).
+
+## Step 2: Regenerate the docs
+
+For each stale file reported above:
+
+1. Read the current source file
+2. Read the existing `.tech.md` file in `.chronicler/`
+3. Update the `.tech.md` to reflect the current state of the source — keep the frontmatter structure, update the body sections (Purpose, Key Components, Dependencies, Architectural Notes)
+4. Bump `governance.verification_status` to `"ai_draft"`
+
+If `$ARGUMENTS` contains a specific file path, only regenerate that one file. Otherwise, regenerate all stale files.
+
+Process files in batches. For each file, preserve the existing `component_id`, `layer`, `owner_team`, and `edges` where still accurate — only update what actually changed.

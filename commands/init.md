@@ -6,7 +6,7 @@ allowed-tools: ["Bash", "Read", "Write", "Edit", "Glob", "Grep"]
 
 # Chronicler Init
 
-Run first-time setup for the current project.
+Run first-time setup for the current project and generate initial `.tech.md` documentation.
 
 ## Step 1: Initialize project structure
 
@@ -14,32 +14,53 @@ Run first-time setup for the current project.
 ${CLAUDE_PLUGIN_ROOT}/scripts/chronicler-run.sh skill.init
 ```
 
-This will:
-1. Auto-detect the project language and framework
-2. Generate `chronicler.yaml` with sensible defaults
-3. Build a merkle tree of the project for drift tracking
+This detects the project type, generates `chronicler.yaml`, and builds a merkle tree.
 
 ## Step 2: Generate initial .tech.md files
 
-After init, run the regenerate command to see which files need documentation:
+After init completes, generate documentation for the project's source files. You are the LLM — read each source file and write a `.tech.md` for it.
 
-```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/chronicler-run.sh skill.regenerate
+For each source file tracked by the merkle tree:
+
+1. Read the source file
+2. Write a `.tech.md` file in `.chronicler/` with this format:
+
+```markdown
+---
+component_id: "<relative-path-to-source>"
+version: "0.1.0"
+layer: "<service|library|config|test|ui|infra>"
+owner_team: "unknown"
+security_level: "low"
+governance:
+  business_impact: null
+  verification_status: "ai_draft"
+  visibility: "internal"
+edges:
+  - target: "<component_id of imported/used module>"
+    relationship: "imports"
+---
+
+## Purpose
+<1-2 sentence summary of what this file does>
+
+## Key Components
+<list the main classes, functions, or exports with one-line descriptions>
+
+## Dependencies
+<what this file imports or depends on>
+
+## Architectural Notes
+<how this fits into the broader system, any non-obvious design decisions>
 ```
 
-If no LLM drafter is configured yet, this reports uncovered files but won't write docs. To enable auto-generation, edit `chronicler.yaml` and set an LLM provider:
+The filename should be the source path with `/` replaced by `--`, e.g. `src/utils/auth.ts` becomes `.chronicler/src--utils--auth.ts.tech.md`.
 
-```yaml
-llm:
-  provider: anthropic  # or openai, google, ollama
-  model: claude-haiku-4-5-20251001
-```
-
-Then re-run regenerate to generate `.tech.md` files for all source files.
+Process files in batches — read 5-10 source files, write their `.tech.md` files, then continue with the next batch. Skip test files, config files, and generated files unless they contain meaningful logic.
 
 ## After init
 
-Hooks run in the background via the plugin — no manual setup needed:
+Hooks run automatically via the plugin:
 - **SessionStart**: prints a freshness summary
 - **PostToolUse (Write/Edit)**: marks edited files as stale candidates
 - **PreToolUse (Read)**: warns when reading a `.tech.md` backed by stale source
