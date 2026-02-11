@@ -11,7 +11,14 @@ from chronicler_core.freshness import check_staleness
 def main(project_path: str | None = None) -> None:
     root = Path(project_path or ".").resolve()
 
-    report = check_staleness(root)
+    try:
+        report = check_staleness(root)
+    except FileNotFoundError:
+        print(f"Error: directory not found: {root}", file=sys.stderr)
+        sys.exit(1)
+    except PermissionError:
+        print(f"Error: permission denied: {root}", file=sys.stderr)
+        sys.exit(1)
 
     fresh_count = report.total_files - len(report.stale) - len(report.uncovered)
 

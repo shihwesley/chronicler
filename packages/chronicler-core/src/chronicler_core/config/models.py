@@ -78,7 +78,7 @@ class MerkleConfig(BaseModel):
     algorithm: str = "sha256"
     doc_dir: str = ".chronicler"
     ignore_patterns: list[str] = Field(default_factory=lambda: [
-        ".git", "node_modules", "__pycache__", ".venv", "build", "dist", ".tox"
+        ".git", "node_modules", "__pycache__", ".venv", "build", "dist", ".tox", ".worktrees"
     ])
     mercator_path: str | None = None
 
