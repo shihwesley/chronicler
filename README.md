@@ -2,11 +2,9 @@
 
 Automated `.tech.md` generation for codebases. Crawl a repo, draft structured technical documentation with an LLM, and track when those docs go stale — all from the command line.
 
-```
-chronicler crawl owner/repo
-chronicler draft owner/repo
-chronicler check --fail-on-stale
-```
+> **This is Chronicler Lite** — built for vibe coders, indie developers, and small teams who want their codebase documented without the overhead. An enterprise version with org-wide governance, CI/CD enforcement, and team-scoped access control is on the way.
+
+**Obsidian user?** Check out [obsidian-chronicler](https://github.com/shihwesley/obsidian-chronicler) — a plugin that auto-discovers your `.chronicler/` folders, renders `agent://` links as clickable navigation, and gives you dependency graphs + health dashboards right in your vault.
 
 ## Why this exists
 
@@ -154,34 +152,6 @@ Inside a Claude Code session:
 
 This registers the Chronicler marketplace and installs the plugin at user scope. Hooks for SessionStart, PostToolUse (Write/Edit), and PreToolUse (Read) are registered automatically.
 
-### Development install
-
-If you want to hack on Chronicler itself:
-
-```bash
-git clone https://github.com/shihwesley/chronicler.git
-cd chronicler
-uv sync
-claude --plugin-dir .
-```
-
-This installs all workspace packages (`chronicler-core`, `chronicler-lite`, `chronicler-obsidian`) in development mode and loads the plugin from the local directory.
-
-### Set up in a project
-
-Set your API keys, then initialize inside Claude Code:
-
-```bash
-export ANTHROPIC_API_KEY="sk-ant-..."
-export GITHUB_TOKEN="ghp_..."
-```
-
-```
-/chronicler:init
-```
-
-This auto-detects your project type, generates a `chronicler.yaml` config, and builds a merkle tree for drift tracking. After init, documentation updates run in the background via hooks.
-
 ### Commands
 
 ```
@@ -213,9 +183,11 @@ Restart Claude Code after updating for changes to take effect.
 
 ### Obsidian
 
-`chronicler obsidian export` syncs your `.tech.md` files into an Obsidian vault. A transform pipeline rewrites `agent://` URIs to wiki-links, flattens governance metadata into Dataview-compatible fields, and generates an index note.
+The [obsidian-chronicler](https://github.com/shihwesley/obsidian-chronicler) plugin gives you a full browsing experience inside Obsidian — auto-discovers `.chronicler/` folders across your vault, renders `agent://` URIs as clickable links, and provides dependency explorer + health dashboard views. Install it via [BRAT](https://github.com/TfTHacker/obsidian42-brat) with `shihwesley/obsidian-chronicler`.
 
-Watch mode (`chronicler obsidian sync --watch`) monitors your `.chronicler/` directory and pushes changes to the vault automatically. REST API mode syncs via Obsidian's Local REST API plugin.
+On the CLI side, `chronicler obsidian map` generates thin `_map.md` files with `[[wikilinks]]` so Obsidian's graph view draws connections between your components — no content duplication needed.
+
+`chronicler obsidian export` syncs `.tech.md` files into a vault with full transform pipeline (link rewriting, frontmatter flattening, Dataview fields). Watch mode (`chronicler obsidian sync --watch`) monitors changes automatically.
 
 ### VS Code
 
@@ -237,6 +209,7 @@ chronicler config init               Create default config
 chronicler config show               Print resolved config
 chronicler obsidian export           Export to Obsidian vault
 chronicler obsidian sync             Watch or REST sync
+chronicler obsidian map              Generate _map.md with [[wikilinks]]
 chronicler queue status              Show job queue stats
 chronicler queue run                 Process pending jobs
 ```
