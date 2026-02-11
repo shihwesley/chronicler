@@ -5,16 +5,14 @@
 # Usage: chronicler-hook.sh <hook_name>
 # Hooks never block Claude Code — all paths guarded with || true.
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "${SCRIPT_DIR}/chronicler-resolve-python.sh"
+
 HOOK="$1"
 
-# Resolve Python interpreter (same chain as chronicler-run.sh)
-if [ -n "${CHRONICLER_PYTHON:-}" ]; then
-  PYTHON="$CHRONICLER_PYTHON"
-elif [ -x "${CLAUDE_PLUGIN_ROOT:-.}/.venv/bin/python3" ]; then
-  PYTHON="${CLAUDE_PLUGIN_ROOT}/.venv/bin/python3"
-else
-  PYTHON="python3"
-fi
+# Bootstrap on first hook fire (silent on failure — hooks don't block)
+bootstrap_venv 2>/dev/null || true
+resolve_python
 
 case "$HOOK" in
   session_start)
