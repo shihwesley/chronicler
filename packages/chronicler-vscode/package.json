@@ -1,8 +1,8 @@
 {
-  "name": "chronicler-vscode",
-  "displayName": "Chronicler",
+  "name": "chronicler-ai-ledger",
+  "displayName": "Chronicler AI Ledger",
   "description": "Navigate .tech.md technical documentation with clickable links, graph view, and backlinks",
-  "version": "0.1.0",
+  "version": "1.0.1",
   "publisher": "shihwesley",
   "license": "MIT",
   "repository": {
