@@ -24,7 +24,7 @@ def auto_detect_provider() -> LLMProvider:
         return ClaudeProvider(
             LLMConfig(
                 provider="anthropic",
-                model="claude-sonnet-4-20250514",
+                model="claude-haiku-4-5-20251001",
                 api_key=api_key,
             )
         )
