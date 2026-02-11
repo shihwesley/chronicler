@@ -27,6 +27,7 @@ For each source file tracked by the merkle tree:
 ```markdown
 ---
 component_id: "<relative-path-to-source>"
+source: "<relative-path-to-source>"
 version: "0.1.0"
 layer: "<service|library|config|test|ui|infra>"
 owner_team: "unknown"
@@ -39,6 +40,8 @@ edges:
   - target: "<component_id of imported/used module>"
     relationship: "imports"
 ---
+
+> Source: [`<relative-path-to-source>`](../<relative-path-to-source>)
 
 ## Purpose
 <1-2 sentence summary of what this file does>
@@ -56,6 +59,14 @@ edges:
 The filename should be the source path with `/` replaced by `--`, e.g. `src/utils/auth.ts` becomes `.chronicler/src--utils--auth.ts.tech.md`.
 
 Process files in batches — read 5-10 source files, write their `.tech.md` files, then continue with the next batch. Skip test files, config files, and generated files unless they contain meaningful logic.
+
+## Step 3: Generate INDEX.md
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/chronicler-run.sh skill.index
+```
+
+This scans all .tech.md files and builds `.chronicler/INDEX.md` with grouped component tables.
 
 ## After init
 

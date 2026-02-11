@@ -1,7 +1,7 @@
 import { App, FuzzySuggestModal, TFile, Notice } from 'obsidian';
 
-import { ChroniclerSettings } from '../settings';
 import { ChroniclerClient, FrontMatter } from '../services/chronicler-client';
+import type { DiscoveryService } from '../services/discovery';
 
 const LAYERS = ['infrastructure', 'logic', 'api', 'data', 'external'] as const;
 
@@ -63,12 +63,12 @@ class ComponentPickerModal extends FuzzySuggestModal<string> {
  * Browse components by layer. Shows a layer picker, then a list of
  * components in that layer, then opens the selected file.
  */
-export async function browseByLayer(app: App, settings: ChroniclerSettings): Promise<void> {
-  const client = new ChroniclerClient(app, settings);
+export async function browseByLayer(app: App, discovery: DiscoveryService): Promise<void> {
+  const client = new ChroniclerClient(app);
 
   return new Promise((resolve) => {
     const layerModal = new LayerPickerModal(app, async (layer) => {
-      const allPaths = await client.getComponentList();
+      const allPaths = client.getComponentList(discovery);
 
       // Filter to components whose frontmatter layer matches
       const matching = allPaths.filter((path) => {

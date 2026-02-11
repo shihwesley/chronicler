@@ -604,3 +604,182 @@ class TestObsidianCLI:
         ])
         assert result.exit_code == 0
         assert "Synced" in result.output
+
+
+# ===========================================================================
+# MapGenerator tests
+# ===========================================================================
+
+
+class TestMapGenerator:
+    """Tests for the _map.md generator."""
+
+    def _make_chronicler_dir(self, tmp_path: Path, files: dict[str, str] | None = None) -> Path:
+        project = tmp_path / "MyProject"
+        project.mkdir()
+        chronicler = project / ".chronicler"
+        chronicler.mkdir()
+        if files is None:
+            files = {"auth-service.tech.md": SAMPLE_TECH_MD}
+        for name, content in files.items():
+            (chronicler / name).write_text(content)
+        return chronicler
+
+    def test_generates_wikilinks_from_edges(self, tmp_path):
+        from chronicler_obsidian.map_generator import MapGenerator
+
+        chronicler = self._make_chronicler_dir(tmp_path)
+        gen = MapGenerator(chronicler)
+        content = gen.generate()
+
+        assert "[[user-db]]" in content
+        assert "[[token-service]]" in content
+        assert "[[gateway]]" in content
+        assert "(reads)" in content
+        assert "(calls)" in content
+        assert "(called_by)" in content
+        assert "## auth-service" in content
+
+    def test_component_with_no_edges(self, tmp_path):
+        from chronicler_obsidian.map_generator import MapGenerator
+
+        no_edges_md = """\
+---
+component_id: lonely-service
+layer: logic
+---
+
+# Lonely Service
+"""
+        chronicler = self._make_chronicler_dir(tmp_path, {
+            "lonely-service.tech.md": no_edges_md,
+        })
+        gen = MapGenerator(chronicler)
+        content = gen.generate()
+
+        assert "## lonely-service" in content
+        assert "(no edges)" in content
+
+    def test_empty_chronicler_directory(self, tmp_path):
+        from chronicler_obsidian.map_generator import MapGenerator
+
+        chronicler = tmp_path / "EmptyProject" / ".chronicler"
+        chronicler.mkdir(parents=True)
+        gen = MapGenerator(chronicler)
+        content = gen.generate()
+
+        assert "No components found." in content
+
+    def test_writes_map_to_correct_location(self, tmp_path):
+        from chronicler_obsidian.map_generator import MapGenerator
+
+        chronicler = self._make_chronicler_dir(tmp_path)
+        gen = MapGenerator(chronicler)
+        out = gen.write()
+
+        assert out == chronicler / "_map.md"
+        assert out.is_file()
+        content = out.read_text()
+        assert "[[user-db]]" in content
+
+    def test_frontmatter_has_chronicler_map_tag(self, tmp_path):
+        from chronicler_obsidian.map_generator import MapGenerator
+
+        chronicler = self._make_chronicler_dir(tmp_path)
+        gen = MapGenerator(chronicler)
+        content = gen.generate()
+
+        assert "tags: [chronicler-map]" in content
+        assert 'title: "MyProject Component Map"' in content
+
+    def test_multiple_components(self, tmp_path):
+        from chronicler_obsidian.map_generator import MapGenerator
+
+        svc_a = """\
+---
+component_id: svc-a
+edges:
+  - target: svc-b
+    type: calls
+---
+# Service A
+"""
+        svc_b = """\
+---
+component_id: svc-b
+edges:
+  - target: svc-a
+    type: called_by
+---
+# Service B
+"""
+        chronicler = self._make_chronicler_dir(tmp_path, {
+            "svc-a.tech.md": svc_a,
+            "svc-b.tech.md": svc_b,
+        })
+        gen = MapGenerator(chronicler)
+        content = gen.generate()
+
+        assert "## svc-a" in content
+        assert "## svc-b" in content
+        assert "[[svc-b]]" in content
+        assert "[[svc-a]]" in content
+
+
+class TestMapGeneratorCLI:
+    """Tests for the 'chronicler obsidian map' CLI command."""
+
+    def test_map_single_source(self, tmp_path):
+        from typer.testing import CliRunner
+        from chronicler.cli import app
+
+        project = tmp_path / "Proj"
+        project.mkdir()
+        chronicler = project / ".chronicler"
+        chronicler.mkdir()
+        (chronicler / "svc.tech.md").write_text(SAMPLE_TECH_MD)
+
+        runner = CliRunner()
+        result = runner.invoke(app, [
+            "obsidian", "map",
+            "--source", str(chronicler),
+        ])
+        assert result.exit_code == 0
+        assert "wrote" in result.output
+        assert (chronicler / "_map.md").is_file()
+
+    def test_map_discover_mode(self, tmp_path):
+        from typer.testing import CliRunner
+        from chronicler.cli import app
+
+        # Create two projects
+        for name in ["ProjA", "ProjB"]:
+            proj = tmp_path / name
+            proj.mkdir()
+            ch = proj / ".chronicler"
+            ch.mkdir()
+            (ch / "svc.tech.md").write_text(SAMPLE_TECH_MD)
+
+        runner = CliRunner()
+        result = runner.invoke(app, [
+            "obsidian", "map",
+            "--discover",
+            "--root", str(tmp_path),
+        ])
+        assert result.exit_code == 0
+        assert "2 map(s) generated" in result.output
+        assert (tmp_path / "ProjA" / ".chronicler" / "_map.md").is_file()
+        assert (tmp_path / "ProjB" / ".chronicler" / "_map.md").is_file()
+
+    def test_map_discover_empty(self, tmp_path):
+        from typer.testing import CliRunner
+        from chronicler.cli import app
+
+        runner = CliRunner()
+        result = runner.invoke(app, [
+            "obsidian", "map",
+            "--discover",
+            "--root", str(tmp_path),
+        ])
+        assert result.exit_code == 0
+        assert "No .chronicler/" in result.output

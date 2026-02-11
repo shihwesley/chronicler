@@ -1,4 +1,5 @@
-import { App, TFile, TAbstractFile, CachedMetadata, FrontMatterCache } from 'obsidian';
+import { App, TFile, CachedMetadata, FrontMatterCache } from 'obsidian';
+import type { DiscoveryService } from './discovery';
 
 /**
  * Parsed representation of an agent:// URI.
@@ -12,14 +13,15 @@ export interface ParsedAgentUri {
 
 /**
  * Resolves agent:// URIs to vault file paths and metadata.
+ * Uses DiscoveryService for multi-project resolution.
  */
 export class LinkResolver {
   private app: App;
-  private chroniclerFolder: string;
+  private discovery: DiscoveryService;
 
-  constructor(app: App, chroniclerFolder: string) {
+  constructor(app: App, discovery: DiscoveryService) {
     this.app = app;
-    this.chroniclerFolder = chroniclerFolder;
+    this.discovery = discovery;
   }
 
   /**
@@ -29,7 +31,6 @@ export class LinkResolver {
   parseUri(uri: string): ParsedAgentUri | null {
     const stripped = uri.replace(/^agent:\/\//, '');
     if (!stripped || stripped === uri) {
-      // Didn't start with agent:// or was empty after stripping
       return null;
     }
 
@@ -45,31 +46,27 @@ export class LinkResolver {
   }
 
   /**
-   * Convert an agent:// URI to a vault-relative file path.
-   * e.g. "agent://auth-service" -> "chronicler/auth-service.md"
+   * Resolve an agent:// URI to a vault-relative file path.
+   * Searches all discovered projects, preferring the project that
+   * contains contextPath (the file currently being viewed).
    */
-  resolveUri(uri: string): string | null {
+  resolveUri(uri: string, contextPath?: string): string | null {
     const parsed = this.parseUri(uri);
     if (!parsed) return null;
 
-    const fileName = parsed.componentId.replace(/\//g, '-');
-    const path = `${this.chroniclerFolder}/${fileName}.md`;
-    return path;
+    const files = this.discovery.resolveComponent(parsed.componentId, contextPath);
+    return files.length > 0 ? files[0].path : null;
   }
 
   /**
-   * Resolve an agent:// URI to an actual TFile in the vault.
-   * Returns null if the file doesn't exist.
+   * Resolve an agent:// URI to a TFile.
    */
-  resolveToFile(uri: string): TFile | null {
-    const path = this.resolveUri(uri);
-    if (!path) return null;
+  resolveToFile(uri: string, contextPath?: string): TFile | null {
+    const parsed = this.parseUri(uri);
+    if (!parsed) return null;
 
-    const abstract: TAbstractFile | null = this.app.vault.getAbstractFileByPath(path);
-    if (abstract instanceof TFile) {
-      return abstract;
-    }
-    return null;
+    const files = this.discovery.resolveComponent(parsed.componentId, contextPath);
+    return files.length > 0 ? files[0] : null;
   }
 
   /**
@@ -86,11 +83,14 @@ export class LinkResolver {
   }
 
   /**
-   * Return all .md files inside the chronicler folder.
+   * Return all .tech.md files across all discovered projects.
    */
   getAllComponents(): TFile[] {
-    const allFiles = this.app.vault.getMarkdownFiles();
-    const folder = this.chroniclerFolder + '/';
-    return allFiles.filter((f) => f.path.startsWith(folder));
+    const byProject = this.discovery.getAllTechFiles();
+    const all: TFile[] = [];
+    for (const files of byProject.values()) {
+      all.push(...files);
+    }
+    return all;
   }
 }

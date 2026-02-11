@@ -4,6 +4,7 @@ Usage:
     python -m chronicler_lite.cli init --path <workspace>
     python -m chronicler_lite.cli regenerate --path <workspace>
     python -m chronicler_lite.cli status --path <workspace> [--format json]
+    python -m chronicler_lite.cli index --path <workspace>
 """
 
 from __future__ import annotations
@@ -27,6 +28,12 @@ def cmd_regenerate(args: argparse.Namespace) -> None:
     # regenerate.main() uses cwd as root; chdir so --path is respected
     os.chdir(args.path)
     regen_main(None)
+
+
+def cmd_index(args: argparse.Namespace) -> None:
+    from chronicler_lite.skill.index import main as index_main
+
+    index_main(args.path)
 
 
 def cmd_status(args: argparse.Namespace) -> None:
@@ -59,6 +66,11 @@ def main() -> None:
     p_regen = sub.add_parser("regenerate", help="Regenerate stale docs")
     p_regen.add_argument("--path", required=True, help="Workspace root path")
     p_regen.set_defaults(func=cmd_regenerate)
+
+    # index
+    p_index = sub.add_parser("index", help="Generate INDEX.md from .tech.md files")
+    p_index.add_argument("--path", required=True, help="Workspace root path")
+    p_index.set_defaults(func=cmd_index)
 
     # status
     p_status = sub.add_parser("status", help="Show staleness report")

@@ -1,5 +1,6 @@
 import { MarkdownPostProcessorContext, Plugin } from 'obsidian';
 import { LinkResolver } from '../services/link-resolver';
+import type { DiscoveryService } from '../services/discovery';
 
 // Matches agent:// URIs in text content
 // Non-global for .test(), create new RegExp('...', 'g') for iterative .exec()
@@ -10,7 +11,7 @@ const AGENT_URI_PATTERN = /agent:\/\/[\w-]+(?:\/[\w-]+)*/;
  * ChroniclerPlugin directly (which would create a circular dep).
  */
 interface ChroniclerPluginLike extends Plugin {
-  settings: { chroniclerFolder: string };
+  discovery: DiscoveryService;
 }
 
 /**
@@ -25,7 +26,7 @@ export class AgentUriProcessor {
     this.plugin = plugin as ChroniclerPluginLike;
     this.resolver = new LinkResolver(
       plugin.app,
-      this.plugin.settings.chroniclerFolder,
+      this.plugin.discovery,
     );
 
     // Register the markdown post-processor
@@ -221,10 +222,13 @@ export class AgentUriProcessor {
     const parsed = this.resolver.parseUri(uri);
     if (!parsed) return;
 
-    const filePath = this.resolver.resolveUri(uri);
+    // Pass active file path for same-project preference
+    const activeFile = this.plugin.app.workspace.getActiveFile();
+    const contextPath = activeFile?.path;
+
+    const filePath = this.resolver.resolveUri(uri, contextPath);
     if (!filePath) return;
 
-    // Build the link text. If there's a heading, append it with #
     let linkText = filePath;
     if (parsed.heading) {
       linkText = `${filePath}#${parsed.heading}`;

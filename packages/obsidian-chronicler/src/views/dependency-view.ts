@@ -215,24 +215,18 @@ export class DependencyExplorerView extends ItemView {
   }
 
   /**
-   * Try to find the .tech.md file for a given component ID.
-   * Looks in the chronicler folder for <id>.tech.md or <id>.md.
+   * Find the .tech.md file for a given component ID across all projects.
+   * Uses DiscoveryService with context from the active file for same-project preference.
    */
   private resolveFile(componentId: string): TFile | null {
-    const folder = this.plugin.settings.chroniclerFolder;
-    const candidates = [
-      `${folder}/${componentId}.tech.md`,
-      `${folder}/${componentId}.md`,
-    ];
-
-    for (const candidate of candidates) {
-      const file = this.app.vault.getAbstractFileByPath(candidate);
-      if (file instanceof TFile) {
-        return file;
-      }
+    const activeFile = this.app.workspace.getActiveFile();
+    const contextPath = activeFile?.path;
+    const matches = this.plugin.discovery.resolveComponent(componentId, contextPath);
+    if (matches.length > 0) {
+      return matches[0];
     }
 
-    // Fallback: search all markdown files for matching component_id
+    // Fallback: search all markdown files for matching component_id in frontmatter
     const allFiles = this.app.vault.getMarkdownFiles();
     for (const file of allFiles) {
       const cache = this.app.metadataCache.getFileCache(file);

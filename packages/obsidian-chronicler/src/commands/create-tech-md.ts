@@ -1,6 +1,6 @@
-import { App, Notice, Modal, Setting, TFile } from 'obsidian';
+import { App, Notice, Modal, Setting, TFile, FuzzySuggestModal } from 'obsidian';
 
-import { ChroniclerSettings } from '../settings';
+import type { DiscoveryService, DiscoveredProject } from '../services/discovery';
 
 const LAYERS = ['infrastructure', 'logic', 'api', 'data', 'external'] as const;
 
@@ -93,42 +93,87 @@ depends_on: []
 }
 
 /**
- * Opens a modal to collect component info, creates the .tech.md file,
- * and opens it in the editor.
+ * Project picker modal — only shown when multiple projects are discovered.
  */
-export async function createTechDoc(app: App, settings: ChroniclerSettings): Promise<void> {
-  return new Promise((resolve) => {
-    const modal = new NewTechDocModal(app, async (name, layer) => {
-      const fileName = name
-        .replace(/([a-z])([A-Z])/g, '$1-$2')
-        .toLowerCase()
-        .replace(/\s+/g, '-');
-      const filePath = `${settings.chroniclerFolder}/${fileName}.tech.md`;
+class ProjectPickerModal extends FuzzySuggestModal<DiscoveredProject> {
+  private projects: DiscoveredProject[];
+  private onChoose: (project: DiscoveredProject) => void;
 
-      // Check if file already exists
-      const existing = app.vault.getAbstractFileByPath(filePath);
-      if (existing) {
-        new Notice(`File already exists: ${filePath}`);
-        if (existing instanceof TFile) {
-          await app.workspace.getLeaf().openFile(existing);
+  constructor(app: App, projects: DiscoveredProject[], onChoose: (project: DiscoveredProject) => void) {
+    super(app);
+    this.projects = projects;
+    this.onChoose = onChoose;
+    this.setPlaceholder('Pick a project...');
+  }
+
+  getItems(): DiscoveredProject[] {
+    return this.projects;
+  }
+
+  getItemText(item: DiscoveredProject): string {
+    return `${item.projectName} (${item.folderPath})`;
+  }
+
+  onChooseItem(item: DiscoveredProject): void {
+    this.onChoose(item);
+  }
+}
+
+/**
+ * Opens a modal to collect component info, creates the .tech.md file,
+ * and opens it in the editor. Shows a project picker if multiple projects exist.
+ */
+export async function createTechDoc(app: App, discovery: DiscoveryService): Promise<void> {
+  const projects = discovery.getProjects();
+
+  if (projects.length === 0) {
+    new Notice('No .chronicler/ folders found. Create one with at least one .tech.md file first.');
+    return;
+  }
+
+  const createInProject = (project: DiscoveredProject) => {
+    return new Promise<void>((resolve) => {
+      const modal = new NewTechDocModal(app, async (name, layer) => {
+        const fileName = name
+          .replace(/([a-z])([A-Z])/g, '$1-$2')
+          .toLowerCase()
+          .replace(/\s+/g, '-');
+        const filePath = `${project.folderPath}/${fileName}.tech.md`;
+
+        const existing = app.vault.getAbstractFileByPath(filePath);
+        if (existing) {
+          new Notice(`File already exists: ${filePath}`);
+          if (existing instanceof TFile) {
+            await app.workspace.getLeaf().openFile(existing);
+          }
+          resolve();
+          return;
         }
+
+        try {
+          const content = buildTemplate(name, layer);
+          const file = await app.vault.create(filePath, content);
+          await app.workspace.getLeaf().openFile(file);
+          new Notice(`Created ${filePath}`);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          new Notice(`Failed to create file: ${message}`, 5000);
+        }
+
         resolve();
-        return;
-      }
+      });
 
-      try {
-        const content = buildTemplate(name, layer);
-        const file = await app.vault.create(filePath, content);
-        await app.workspace.getLeaf().openFile(file);
-        new Notice(`Created ${filePath}`);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        new Notice(`Failed to create file: ${message}`, 5000);
-      }
-
-      resolve();
+      modal.open();
     });
+  };
 
-    modal.open();
-  });
+  if (projects.length === 1) {
+    await createInProject(projects[0]);
+  } else {
+    // Multi-project: pick first
+    const picker = new ProjectPickerModal(app, projects, async (project) => {
+      await createInProject(project);
+    });
+    picker.open();
+  }
 }

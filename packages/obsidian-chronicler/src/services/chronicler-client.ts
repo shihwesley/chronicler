@@ -1,7 +1,7 @@
 import { App, TFile, CachedMetadata } from 'obsidian';
 import { execFile } from 'child_process';
 
-import { ChroniclerSettings } from '../settings';
+import type { DiscoveryService, DiscoveredProject } from './discovery';
 
 export interface SyncResult {
   success: boolean;
@@ -21,61 +21,98 @@ export interface FrontMatter {
 }
 
 /**
- * Connects to the Chronicler CLI to run sync operations
+ * Connects to the Chronicler CLI to run sync/map operations
  * and reads component metadata from the vault.
  */
 export class ChroniclerClient {
   private app: App;
-  private settings: ChroniclerSettings;
 
-  constructor(app: App, settings: ChroniclerSettings) {
+  constructor(app: App) {
     this.app = app;
-    this.settings = settings;
   }
 
   /**
-   * Runs `chronicler obsidian export` via shell.
-   * Obsidian is Electron, so Node child_process is available.
+   * Run `chronicler obsidian map` for each discovered project.
    */
-  sync(): Promise<SyncResult> {
+  async syncAll(discovery: DiscoveryService): Promise<SyncResult> {
+    const projects = discovery.getProjects();
+    if (projects.length === 0) {
+      return { success: true, filesUpdated: 0, message: 'No projects discovered' };
+    }
+
     const vaultPath = (this.app.vault.adapter as { getBasePath?(): string }).getBasePath?.() ?? '';
-    const targetDir = `${vaultPath}/${this.settings.chroniclerFolder}`;
+    let totalUpdated = 0;
+    const errors: string[] = [];
 
+    for (const project of projects) {
+      const projectDir = `${vaultPath}/${project.folderPath}`;
+      const result = await this.runMap(projectDir);
+      if (result.success) {
+        totalUpdated += result.filesUpdated;
+      } else {
+        errors.push(`${project.projectName}: ${result.message}`);
+      }
+    }
+
+    if (errors.length > 0) {
+      return {
+        success: false,
+        filesUpdated: totalUpdated,
+        message: errors.join('; '),
+      };
+    }
+
+    return {
+      success: true,
+      filesUpdated: totalUpdated,
+      message: `Generated maps for ${projects.length} project(s)`,
+    };
+  }
+
+  /**
+   * Runs `chronicler obsidian map --source <dir>` for a single project.
+   */
+  private runMap(sourceDir: string): Promise<SyncResult> {
     return new Promise((resolve) => {
-      execFile('chronicler', ['obsidian', 'export', '--vault', targetDir], { timeout: 60_000 }, (error, stdout, stderr) => {
-        if (error) {
+      execFile(
+        'chronicler',
+        ['obsidian', 'map', '--source', sourceDir],
+        { timeout: 60_000 },
+        (error, stdout, stderr) => {
+          if (error) {
+            resolve({
+              success: false,
+              filesUpdated: 0,
+              message: stderr?.trim() || error.message,
+            });
+            return;
+          }
+
+          const countMatch = stdout.match(/(\d+)\s+map/i);
+          const filesUpdated = countMatch ? parseInt(countMatch[1], 10) : 1;
+
           resolve({
-            success: false,
-            filesUpdated: 0,
-            message: stderr?.trim() || error.message,
+            success: true,
+            filesUpdated,
+            message: stdout.trim() || 'Map generated',
           });
-          return;
-        }
-
-        // Try to parse a count from stdout (e.g. "Exported 12 files")
-        const countMatch = stdout.match(/(\d+)\s+file/i);
-        const filesUpdated = countMatch ? parseInt(countMatch[1], 10) : 0;
-
-        resolve({
-          success: true,
-          filesUpdated,
-          message: stdout.trim() || 'Sync completed',
-        });
-      });
+        },
+      );
     });
   }
 
   /**
-   * Lists all .md files inside the chronicler folder.
+   * Lists all .tech.md files across discovered projects.
    */
-  getComponentList(): Promise<string[]> {
-    const folder = this.settings.chroniclerFolder;
-    const files = this.app.vault.getFiles();
-    const components = files
-      .filter((f) => f.path.startsWith(folder + '/') && f.extension === 'md')
-      .map((f) => f.path);
-
-    return Promise.resolve(components);
+  getComponentList(discovery: DiscoveryService): string[] {
+    const byProject = discovery.getAllTechFiles();
+    const paths: string[] = [];
+    for (const files of byProject.values()) {
+      for (const f of files) {
+        paths.push(f.path);
+      }
+    }
+    return paths;
   }
 
   /**
@@ -92,7 +129,6 @@ export class ChroniclerClient {
       return null;
     }
 
-    // Strip Obsidian's internal position field
     const { position: _pos, ...frontmatter } = cache.frontmatter;
     return frontmatter as FrontMatter;
   }

@@ -19,7 +19,7 @@ export class ChroniclerCommands {
       id: 'chronicler-sync',
       name: 'Chronicler: Sync Now',
       callback: () => {
-        syncVault(plugin.app, chronicler.settings);
+        syncVault(plugin.app, chronicler.discovery);
       },
     });
 
@@ -27,7 +27,7 @@ export class ChroniclerCommands {
       id: 'chronicler-create',
       name: 'Chronicler: Create .tech.md',
       callback: () => {
-        createTechDoc(plugin.app, chronicler.settings);
+        createTechDoc(plugin.app, chronicler.discovery);
       },
     });
 
@@ -51,7 +51,7 @@ export class ChroniclerCommands {
       id: 'chronicler-browse-layer',
       name: 'Chronicler: Browse by Layer',
       callback: () => {
-        browseByLayer(plugin.app, chronicler.settings);
+        browseByLayer(plugin.app, chronicler.discovery);
       },
     });
   }

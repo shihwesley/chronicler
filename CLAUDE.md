@@ -11,6 +11,15 @@ Three core services (all planned):
 2. **Continuous Harvester** — webhook-driven diff analysis, drift detection (fails CI if docs stale)
 3. **GraphQL Indexer** — crawls `.chronicler/` folders into graph DB, exposes query layer for Mnemon
 
+## Exploration Protocol
+
+When exploring or understanding this codebase:
+
+1. **Start with the index.** Read `.chronicler/INDEX.md` for the full component map with one-line purposes.
+2. **Dive into .tech.md** for any component you need to understand. Each has purpose, key functions, dependencies, and architectural notes. Path convention: `path/to/file.py` → `.chronicler/path--to--file.py.tech.md`
+3. **Read source only when modifying.** The .tech.md gives you enough context for understanding; read the actual `.py` file only when you need to edit it or when the .tech.md is flagged stale.
+4. **Check edges.** The `edges` field in each .tech.md frontmatter maps imports — use it to trace dependencies without grepping.
+
 ## AI Agent Rules
 
 Before modifying code:

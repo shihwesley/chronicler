@@ -31,4 +31,28 @@ htmlcov/
 # OS
 .DS_Store
 Thumbs.db
+
+# Worktrees
 .worktrees/
+
+# Internal docs (specs, plans, design decisions)
+docs/
+
+# Session artifacts (planning, progress tracking)
+findings.md
+progress.md
+task_plan.md
+task_plan_post_mvp.md
+cleanup-*.sh
+verify-*.sh
+
+# VS Code extension build output
+packages/chronicler-vscode/out/
+packages/chronicler-vscode/*.vsix
+
+# Obsidian plugin build output
+packages/obsidian-chronicler/main.js
+packages/obsidian-chronicler/main.js.map
+
+# UV lock (generated, large)
+uv.lock

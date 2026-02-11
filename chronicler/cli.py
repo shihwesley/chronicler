@@ -754,6 +754,52 @@ def sync_cmd(
             rprint(f"  [red]error:[/red] {err.file}: {err.error}")
 
 
+@obsidian_app.command(name="map")
+def generate_map(
+    source: Annotated[str, typer.Option("--source", "-s", help="Path to a single .chronicler/ directory")] = ".chronicler",
+    discover: Annotated[bool, typer.Option("--discover", help="Auto-discover all .chronicler/ dirs under root")] = False,
+    root: Annotated[str, typer.Option("--root", "-r", help="Root directory for discovery mode")] = ".",
+) -> None:
+    """Generate _map.md with [[wikilinks]] for Obsidian graph view."""
+    from chronicler_obsidian.map_generator import MapGenerator
+
+    if discover:
+        root_path = Path(root).resolve()
+        dirs = sorted(root_path.rglob(".chronicler"))
+        # Also check for non-dot variant
+        dirs.extend(sorted(p for p in root_path.rglob("chronicler") if p.is_dir() and p.name == "chronicler"))
+        # Deduplicate
+        seen: set[Path] = set()
+        unique: list[Path] = []
+        for d in dirs:
+            resolved = d.resolve()
+            if resolved not in seen and resolved.is_dir():
+                seen.add(resolved)
+                # Must contain at least one .tech.md
+                if list(resolved.glob("*.tech.md")):
+                    unique.append(resolved)
+
+        if not unique:
+            rprint("[yellow]No .chronicler/ directories with .tech.md files found.[/yellow]")
+            raise typer.Exit(0)
+
+        for d in unique:
+            gen = MapGenerator(d)
+            out = gen.write()
+            rprint(f"  [green]wrote[/green] {out}")
+
+        rprint(f"\n[bold]{len(unique)} map(s) generated.[/bold]")
+    else:
+        source_path = Path(source).resolve()
+        if not source_path.is_dir():
+            rprint(f"[red]Directory not found:[/red] {source_path}")
+            raise typer.Exit(1)
+
+        gen = MapGenerator(source_path)
+        out = gen.write()
+        rprint(f"[green]wrote[/green] {out}")
+
+
 # ---------------------------------------------------------------------------
 # Merkle commands (check, blast-radius) and draft --stale support
 # ---------------------------------------------------------------------------
@@ -837,51 +883,17 @@ def check(
 
 
 def _parse_tech_md_edges(tech_md_path: Path) -> list[dict]:
-    """Parse YAML frontmatter from a .tech.md file and return its edges list.
+    """Delegate to chronicler_obsidian.map_generator.parse_tech_md_edges."""
+    from chronicler_obsidian.map_generator import parse_tech_md_edges
 
-    Each edge is expected to have at least a 'target' key, and optionally 'type'.
-    """
-    if not tech_md_path.is_file():
-        return []
-    content = tech_md_path.read_text(encoding="utf-8")
-    if not content.startswith("---"):
-        return []
-    end = content.find("---", 3)
-    if end == -1:
-        return []
-    try:
-        fm = yaml.safe_load(content[3:end])
-    except yaml.YAMLError:
-        return []
-    if not isinstance(fm, dict):
-        return []
-    edges = fm.get("edges", [])
-    if not isinstance(edges, list):
-        return []
-    return edges
+    return parse_tech_md_edges(tech_md_path)
 
 
 def _build_edge_graph(chronicler_dir: Path) -> dict[str, list[dict]]:
-    """Scan all .tech.md files and build component_id -> edges adjacency map."""
-    graph: dict[str, list[dict]] = {}
-    if not chronicler_dir.is_dir():
-        return graph
-    for md in sorted(chronicler_dir.glob("*.tech.md")):
-        edges = _parse_tech_md_edges(md)
-        # Derive component_id from the frontmatter or filename
-        content = md.read_text(encoding="utf-8")
-        component_id = md.stem  # fallback
-        if content.startswith("---"):
-            end = content.find("---", 3)
-            if end != -1:
-                try:
-                    fm = yaml.safe_load(content[3:end])
-                    if isinstance(fm, dict) and "component_id" in fm:
-                        component_id = fm["component_id"]
-                except yaml.YAMLError:
-                    pass
-        graph[component_id] = edges
-    return graph
+    """Delegate to chronicler_obsidian.map_generator.build_edge_graph."""
+    from chronicler_obsidian.map_generator import build_edge_graph
+
+    return build_edge_graph(chronicler_dir)
 
 
 @app.command(name="blast-radius")

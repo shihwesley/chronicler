@@ -1,23 +1,23 @@
 import { App, Notice } from 'obsidian';
 
-import { ChroniclerSettings } from '../settings';
 import { ChroniclerClient } from '../services/chronicler-client';
+import type { DiscoveryService } from '../services/discovery';
 
 /**
- * Triggers a Chronicler sync via CLI and reports the result.
+ * Generates _map.md files for all discovered projects via CLI.
  */
-export async function syncVault(app: App, settings: ChroniclerSettings): Promise<void> {
-  const client = new ChroniclerClient(app, settings);
+export async function syncVault(app: App, discovery: DiscoveryService): Promise<void> {
+  const client = new ChroniclerClient(app);
 
-  new Notice('Chronicler: Syncing...');
+  new Notice('Chronicler: Generating maps...');
 
   try {
-    const result = await client.sync();
+    const result = await client.syncAll(discovery);
 
     if (result.success) {
-      new Notice(`Chronicler: Sync complete — ${result.filesUpdated} file(s) updated`);
+      new Notice(`Chronicler: Maps generated — ${result.filesUpdated} project(s)`);
     } else {
-      new Notice(`Chronicler: Sync failed — ${result.message}`, 5000);
+      new Notice(`Chronicler: Map generation failed — ${result.message}`, 5000);
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

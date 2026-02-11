@@ -49,6 +49,16 @@ def main(file_path: str | None = None) -> None:
         for path, reason in result.failed:
             print(f"  {path}: {reason}")
 
+    # Rebuild INDEX.md if any files were regenerated
+    if result.regenerated:
+        try:
+            from chronicler_lite.skill.index import build_index
+
+            build_index(root)
+        except Exception:
+            # Non-critical — don't fail the regeneration over an index rebuild error
+            pass
+
 
 if __name__ == "__main__":
     path_arg = sys.argv[1] if len(sys.argv) > 1 else None

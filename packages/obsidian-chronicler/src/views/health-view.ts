@@ -19,6 +19,7 @@ const LAYER_COLORS: Record<string, string> = {
 interface ComponentHealth {
   file: TFile;
   componentId: string;
+  projectName: string;
   layer: string | null;
   verificationStatus: string | null;
   lastUpdated: Date | null;
@@ -129,6 +130,12 @@ export class HealthDashboardView extends ItemView {
       );
     }
 
+    // By Project grouping (multi-project awareness)
+    const projectNames = new Set(components.map((c) => c.projectName));
+    if (projectNames.size > 1) {
+      this.renderByProject(components);
+    }
+
     // By Layer grouping (graph view enhancement)
     if (this.plugin.settings.graphColorByLayer) {
       this.renderByLayer(components);
@@ -193,6 +200,47 @@ export class HealthDashboardView extends ItemView {
         text: ` (${detailFn(comp)})`,
         cls: 'chronicler-health-detail',
       });
+    }
+  }
+
+  /**
+   * Groups components by discovered project name.
+   * Only shown when multiple projects exist in the vault.
+   */
+  private renderByProject(components: ComponentHealth[]): void {
+    const byProject = new Map<string, ComponentHealth[]>();
+    for (const comp of components) {
+      const existing = byProject.get(comp.projectName);
+      if (existing) {
+        existing.push(comp);
+      } else {
+        byProject.set(comp.projectName, [comp]);
+      }
+    }
+
+    const section = this.contentEl.createEl('div', { cls: 'chronicler-health-section' });
+    section.createEl('div', {
+      text: 'By Project',
+      cls: 'chronicler-health-section-title',
+    });
+
+    for (const [projectName, comps] of byProject) {
+      const projEl = section.createEl('div', { cls: 'chronicler-health-layer' });
+      projEl.createEl('span', {
+        text: `${projectName} (${comps.length})`,
+        cls: 'chronicler-health-layer-name',
+      });
+
+      const projList = projEl.createEl('div', { cls: 'chronicler-health-layer-items' });
+      for (const comp of comps) {
+        const item = projList.createEl('span', {
+          text: comp.componentId,
+          cls: 'chronicler-health-link is-clickable',
+        });
+        item.addEventListener('click', () => {
+          this.app.workspace.openLinkText(comp.file.path, '');
+        });
+      }
     }
   }
 
@@ -269,72 +317,69 @@ export class HealthDashboardView extends ItemView {
   }
 
   /**
-   * Scan all markdown files in the chronicler folder, read frontmatter,
+   * Scan all .tech.md files across discovered projects, read frontmatter,
    * and build a health report for each component.
    */
   private async scanComponents(): Promise<ComponentHealth[]> {
-    const folder = this.plugin.settings.chroniclerFolder;
-    const allFiles = this.app.vault.getMarkdownFiles();
-    const techFiles = allFiles.filter((f) =>
-      f.path.startsWith(folder + '/') && f.path.endsWith('.tech.md')
-    );
-
+    const byProject = this.plugin.discovery.getAllTechFiles();
     const now = Date.now();
     const results: ComponentHealth[] = [];
 
-    for (const file of techFiles) {
-      const cache = this.app.metadataCache.getFileCache(file);
-      const fm = cache?.frontmatter;
+    for (const [projectName, techFiles] of byProject) {
+      for (const file of techFiles) {
+        const cache = this.app.metadataCache.getFileCache(file);
+        const fm = cache?.frontmatter;
 
-      const componentId =
-        (fm?.['component_id'] as string) ||
-        file.basename.replace('.tech', '');
+        const componentId =
+          (fm?.['component_id'] as string) ||
+          file.basename.replace('.tech', '');
 
-      const layer = (fm?.['layer'] as string) || null;
+        const layer = (fm?.['layer'] as string) || null;
 
-      const verificationStatus =
-        (fm?.['verification_status'] as string) || null;
+        const verificationStatus =
+          (fm?.['verification_status'] as string) || null;
 
-      let lastUpdated: Date | null = null;
-      let daysSinceUpdate: number | null = null;
-      if (fm?.['last_updated']) {
-        const parsed = new Date(String(fm['last_updated']));
-        if (!isNaN(parsed.getTime())) {
-          lastUpdated = parsed;
-          daysSinceUpdate = Math.floor(
-            (now - parsed.getTime()) / (1000 * 60 * 60 * 24)
-          );
+        let lastUpdated: Date | null = null;
+        let daysSinceUpdate: number | null = null;
+        if (fm?.['last_updated']) {
+          const parsed = new Date(String(fm['last_updated']));
+          if (!isNaN(parsed.getTime())) {
+            lastUpdated = parsed;
+            daysSinceUpdate = Math.floor(
+              (now - parsed.getTime()) / (1000 * 60 * 60 * 24)
+            );
+          }
         }
-      }
 
-      const missingFields: string[] = [];
-      for (const field of REQUIRED_FIELDS) {
-        if (!fm?.[field]) {
-          missingFields.push(field);
+        const missingFields: string[] = [];
+        for (const field of REQUIRED_FIELDS) {
+          if (!fm?.[field]) {
+            missingFields.push(field);
+          }
         }
+
+        let hasOutdatedFlag = false;
+        const content = await this.app.vault.cachedRead(file);
+        if (content.includes('[FLAG:OUTDATED]')) {
+          hasOutdatedFlag = true;
+        }
+
+        const isStale =
+          daysSinceUpdate !== null && daysSinceUpdate > STALE_DAYS;
+
+        results.push({
+          file,
+          componentId,
+          projectName,
+          layer,
+          verificationStatus,
+          lastUpdated,
+          daysSinceUpdate,
+          missingFields,
+          hasOutdatedFlag,
+          isStale,
+        });
       }
-
-      // Check file content for [FLAG:OUTDATED] markers
-      let hasOutdatedFlag = false;
-      const content = await this.app.vault.cachedRead(file);
-      if (content.includes('[FLAG:OUTDATED]')) {
-        hasOutdatedFlag = true;
-      }
-
-      const isStale =
-        daysSinceUpdate !== null && daysSinceUpdate > STALE_DAYS;
-
-      results.push({
-        file,
-        componentId,
-        layer,
-        verificationStatus,
-        lastUpdated,
-        daysSinceUpdate,
-        missingFields,
-        hasOutdatedFlag,
-        isStale,
-      });
     }
 
     // Sort: worst health first (stale > flagged > missing fields > drafts > healthy)
