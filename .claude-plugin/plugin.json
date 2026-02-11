@@ -1,6 +1,6 @@
 {
   "name": "chronicler",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Ambient .tech.md generation — auto-documents and tracks freshness of your codebase",
   "author": { "name": "shihwesley" },
   "repository": "https://github.com/shihwesley/chronicler",
