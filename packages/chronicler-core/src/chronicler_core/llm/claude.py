@@ -31,7 +31,11 @@ class ClaudeProvider(LLMProvider):
                 model=self.config.model,
                 max_tokens=max_tokens,
                 temperature=self.config.temperature,
-                system=system,
+                system=[{
+                    "type": "text",
+                    "text": system,
+                    "cache_control": {"type": "ephemeral"},
+                }],
                 messages=[{"role": "user", "content": user}],
             )
             if not message.content or not hasattr(message.content[0], "text"):
@@ -60,7 +64,11 @@ class ClaudeProvider(LLMProvider):
                 model=self.config.model,
                 max_tokens=max_tokens,
                 temperature=self.config.temperature,
-                system=system,
+                system=[{
+                    "type": "text",
+                    "text": system,
+                    "cache_control": {"type": "ephemeral"},
+                }],
                 messages=[{"role": "user", "content": user}],
             ) as stream:
                 async for text in stream.text_stream:

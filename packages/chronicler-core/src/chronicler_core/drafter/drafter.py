@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+
 import yaml
 
 from chronicler_core.config import ChroniclerConfig
@@ -12,6 +14,8 @@ from chronicler_core.drafter.models import FrontmatterModel, PromptContext, Tech
 from chronicler_core.drafter.sections import draft_architectural_intent
 from chronicler_core.llm.base import LLMProvider
 from chronicler_core.vcs.models import CrawlResult
+
+logger = logging.getLogger(__name__)
 
 
 class Drafter:
@@ -43,6 +47,13 @@ class Drafter:
 
         # 3. Draft architectural intent (async LLM call)
         intent = await draft_architectural_intent(context, self.llm)
+
+        word_count = len(intent.split())
+        if word_count > 1500:
+            logger.warning(
+                "Architectural intent is %d words (target: ~1000, max: 1500)",
+                word_count,
+            )
 
         # 4. Generate connectivity graph
         graph = generate_connectivity_graph(crawl_result)

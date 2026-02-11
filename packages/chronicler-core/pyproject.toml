@@ -11,7 +11,7 @@ dependencies = [
     "pygithub",
     "anthropic",
     "openai",
-    "google-generativeai",
+    "google-genai",
     "httpx",
     "pydantic>=2.0.0",
     "pyyaml",

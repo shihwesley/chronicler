@@ -4,7 +4,7 @@ from typing import Literal
 
 class LLMSettings(BaseModel):
     provider: Literal["anthropic", "openai", "google", "ollama", "auto"] = "anthropic"
-    model: str = "claude-sonnet-4-20250514"
+    model: str = "claude-haiku-4-5-20251001"
     api_key_env: str = "ANTHROPIC_API_KEY"
     max_tokens: int = Field(default=4096, gt=0)
     timeout: int = Field(default=60, gt=0)

@@ -4,20 +4,19 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 
-import google.generativeai as genai
-from google.api_core import exceptions as google_exceptions
+from google import genai
+from google.genai import types
 
 from chronicler_core.llm.base import LLMProvider
 from chronicler_core.llm.models import LLMConfig, LLMError, LLMResponse, TokenUsage
 
 
 class GeminiProvider(LLMProvider):
-    """Gemini adapter using the google-generativeai async SDK."""
+    """Gemini adapter using the google-genai async SDK."""
 
     def __init__(self, config: LLMConfig) -> None:
         super().__init__(config)
-        genai.configure(api_key=config.api_key)
-        self._model = genai.GenerativeModel(config.model)
+        self._client = genai.Client(api_key=config.api_key)
 
     async def generate(
         self,
@@ -26,9 +25,11 @@ class GeminiProvider(LLMProvider):
         max_tokens: int = 4096,
     ) -> LLMResponse:
         try:
-            response = await self._model.generate_content_async(
-                f"{system}\n\n{user}",
-                generation_config=genai.types.GenerationConfig(
+            response = await self._client.aio.models.generate_content(
+                model=self.config.model,
+                contents=user,
+                config=types.GenerateContentConfig(
+                    system_instruction=system,
                     max_output_tokens=max_tokens,
                     temperature=self.config.temperature,
                 ),
@@ -44,12 +45,12 @@ class GeminiProvider(LLMProvider):
                 ),
                 model=self.config.model,
             )
-        except google_exceptions.GoogleAPIError as e:
+        except Exception as e:
             raise LLMError(
                 "gemini",
                 "generate",
                 e,
-                retryable=isinstance(e, google_exceptions.ResourceExhausted),
+                retryable="429" in str(e) or "503" in str(e),
             ) from e
 
     async def generate_stream(
@@ -59,21 +60,21 @@ class GeminiProvider(LLMProvider):
         max_tokens: int = 4096,
     ) -> AsyncIterator[str]:
         try:
-            response = await self._model.generate_content_async(
-                f"{system}\n\n{user}",
-                generation_config=genai.types.GenerationConfig(
+            async for chunk in self._client.aio.models.generate_content_stream(
+                model=self.config.model,
+                contents=user,
+                config=types.GenerateContentConfig(
+                    system_instruction=system,
                     max_output_tokens=max_tokens,
                     temperature=self.config.temperature,
                 ),
-                stream=True,
-            )
-            async for chunk in response:
+            ):
                 if chunk.text:
                     yield chunk.text
-        except google_exceptions.GoogleAPIError as e:
+        except Exception as e:
             raise LLMError(
                 "gemini",
                 "generate_stream",
                 e,
-                retryable=isinstance(e, google_exceptions.ResourceExhausted),
+                retryable="429" in str(e) or "503" in str(e),
             ) from e
