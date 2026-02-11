@@ -3,7 +3,7 @@
   "displayName": "Chronicler",
   "description": "Navigate .tech.md technical documentation with clickable links, graph view, and backlinks",
   "version": "0.1.0",
-  "publisher": "chronicler",
+  "publisher": "shihwesley",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -44,6 +44,10 @@
       {
         "command": "chronicler.status",
         "title": "Chronicler: Show Status"
+      },
+      {
+        "command": "chronicler.setupProvider",
+        "title": "Chronicler: Setup LLM Provider"
       }
     ],
     "configuration": {
@@ -126,6 +130,22 @@
           "type": "string",
           "default": "python3",
           "description": "Path to Python interpreter with chronicler-lite installed"
+        },
+        "chronicler.watch.sourceGlob": {
+          "type": "string",
+          "default": "**/*.{ts,js,py,rs,go,java}",
+          "description": "Source files to watch for staleness changes"
+        },
+        "chronicler.llm.provider": {
+          "type": "string",
+          "enum": ["anthropic", "openai", "google", "ollama"],
+          "default": "anthropic",
+          "description": "LLM provider for doc generation"
+        },
+        "chronicler.llm.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API key for the selected provider (prefer Setup command for secure storage)"
         }
       }
     },

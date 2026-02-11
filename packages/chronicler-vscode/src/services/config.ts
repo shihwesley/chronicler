@@ -17,5 +17,6 @@ export function getConfig() {
     wikiLinksEnabled: config.get<boolean>('wikiLinks.enable', true),
     agentUriEnabled: config.get<boolean>('agentUri.enable', true),
     pythonPath: config.get<string>('pythonPath', 'python3'),
+    sourceWatchGlob: config.get<string>('watch.sourceGlob', '**/*.{ts,js,py,rs,go,java}'),
   };
 }

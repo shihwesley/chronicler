@@ -7,6 +7,12 @@ import * as vscode from 'vscode';
 
 const execFileAsync = promisify(execFile);
 
+const PROVIDER_ENV_VARS: Record<string, string> = {
+  anthropic: 'ANTHROPIC_API_KEY',
+  openai: 'OPENAI_API_KEY',
+  google: 'GOOGLE_API_KEY',
+};
+
 export interface ChroniclerStatus {
   staleCount: number;
   totalCount: number;
@@ -14,9 +20,11 @@ export interface ChroniclerStatus {
 
 export class PythonBridge {
   private pythonPath: string;
+  private secretStorage: vscode.SecretStorage;
 
-  constructor(pythonPath: string = 'python3') {
+  constructor(pythonPath: string, secretStorage: vscode.SecretStorage) {
     this.pythonPath = pythonPath;
+    this.secretStorage = secretStorage;
   }
 
   async init(workspacePath: string): Promise<string> {
@@ -51,10 +59,23 @@ export class PythonBridge {
   }
 
   private async run(args: string[], timeout: number): Promise<string> {
+    const env: Record<string, string | undefined> = { ...process.env };
+
+    // Inject LLM API key from SecretStorage into subprocess environment
+    const provider = vscode.workspace.getConfiguration('chronicler').get<string>('llm.provider', 'anthropic');
+    const envVar = PROVIDER_ENV_VARS[provider];
+    if (envVar) {
+      const apiKey = await this.secretStorage.get('chronicler.llm.apiKey');
+      if (apiKey) {
+        env[envVar] = apiKey;
+      }
+    }
+
     try {
       const { stdout, stderr } = await execFileAsync(this.pythonPath, args, {
         timeout,
         maxBuffer: 4 * 1024 * 1024,
+        env,
       });
       if (stderr?.trim()) {
         console.warn('[Chronicler CLI stderr]', stderr.trim());

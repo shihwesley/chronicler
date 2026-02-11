@@ -96,8 +96,52 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   context.subscriptions.push(
     vscode.commands.registerCommand('chronicler.createTechMd', async () => {
-      // TODO: prompt user for component name, create .tech.md from template
-      vscode.window.showInformationMessage('Chronicler: Create .tech.md not yet implemented');
+      const wsFolder = vscode.workspace.workspaceFolders?.[0];
+      if (!wsFolder) {
+        vscode.window.showWarningMessage('No workspace folder open.');
+        return;
+      }
+
+      const name = await vscode.window.showInputBox({
+        prompt: 'Component name (e.g. auth-service)',
+        placeHolder: 'my-component',
+        validateInput: (v) => v.trim() ? null : 'Name is required',
+      });
+      if (!name) return;
+
+      const layer = await vscode.window.showQuickPick(
+        ['api', 'service', 'model', 'util', 'ui', 'config', 'test', 'other'],
+        { placeHolder: 'Select component layer' },
+      );
+      if (!layer) return;
+
+      const chroniclerDir = vscode.Uri.joinPath(wsFolder.uri, '.chronicler');
+      const filePath = vscode.Uri.joinPath(chroniclerDir, `${name}.tech.md`);
+
+      const template = [
+        '---',
+        `title: "${name}"`,
+        `layer: ${layer}`,
+        'owner_team: ""',
+        'status: draft',
+        '---',
+        '',
+        `# ${name}`,
+        '',
+        '## Purpose',
+        '',
+        '## Dependencies',
+        '',
+        '## API Surface',
+        '',
+        '## Invariants',
+        '',
+      ].join('\n');
+
+      await vscode.workspace.fs.createDirectory(chroniclerDir);
+      await vscode.workspace.fs.writeFile(filePath, Buffer.from(template, 'utf-8'));
+      const doc = await vscode.workspace.openTextDocument(filePath);
+      await vscode.window.showTextDocument(doc);
     })
   );
 
@@ -120,7 +164,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   // -- Python bridge + CLI commands --
 
-  const pythonBridge = new PythonBridge(config.pythonPath);
+  const pythonBridge = new PythonBridge(config.pythonPath, context.secrets);
   const outputChannel = vscode.window.createOutputChannel('Chronicler');
   context.subscriptions.push(outputChannel);
 
@@ -197,6 +241,39 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     })
   );
 
+  // -- LLM Provider setup --
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('chronicler.setupProvider', async () => {
+      const provider = await vscode.window.showQuickPick(
+        [
+          { label: 'Anthropic', value: 'anthropic' },
+          { label: 'OpenAI', value: 'openai' },
+          { label: 'Google', value: 'google' },
+          { label: 'Ollama (Local)', value: 'ollama' },
+        ],
+        { placeHolder: 'Select LLM provider' },
+      );
+      if (!provider) return;
+
+      await vscode.workspace.getConfiguration('chronicler').update('llm.provider', provider.value, true);
+
+      if (provider.value !== 'ollama') {
+        const apiKey = await vscode.window.showInputBox({
+          prompt: `Enter ${provider.label} API key`,
+          password: true,
+          placeHolder: 'sk-...',
+          validateInput: (v) => v.trim() ? null : 'API key is required',
+        });
+        if (!apiKey) return;
+
+        await context.secrets.store('chronicler.llm.apiKey', apiKey);
+      }
+
+      vscode.window.showInformationMessage(`Chronicler: ${provider.label} configured.`);
+    })
+  );
+
   // -- Status bar --
 
   const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
@@ -239,6 +316,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   statusWatcher.onDidCreate(debouncedStatusUpdate);
   statusWatcher.onDidDelete(debouncedStatusUpdate);
   context.subscriptions.push(statusWatcher, { dispose: () => { clearTimeout(statusDebounce); disposed = true; } });
+
+  // Watch source files for staleness changes (longer debounce to avoid thrashing)
+  const sourceGlob = config.sourceWatchGlob;
+  const sourceWatcher = vscode.workspace.createFileSystemWatcher(sourceGlob);
+  let sourceDebounce: NodeJS.Timeout | undefined;
+  const debouncedSourceUpdate = () => {
+    clearTimeout(sourceDebounce);
+    sourceDebounce = setTimeout(() => updateStatusBar(), 5000);
+  };
+  sourceWatcher.onDidChange(debouncedSourceUpdate);
+  sourceWatcher.onDidCreate(debouncedSourceUpdate);
+  sourceWatcher.onDidDelete(debouncedSourceUpdate);
+  context.subscriptions.push(sourceWatcher, { dispose: () => clearTimeout(sourceDebounce) });
 
   // -- Context flag for menu visibility --
 
