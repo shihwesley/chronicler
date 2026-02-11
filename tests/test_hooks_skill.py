@@ -528,55 +528,8 @@ class TestSkillInit:
         assert existing.read_text() == "custom: true\n"
         assert "already exists" in capsys.readouterr().out
 
-    def test_install_hooks_creates_settings(self, tmp_path):
-        from chronicler_lite.skill.init import install_hooks
-        install_hooks(tmp_path)
-
-        settings_path = tmp_path / ".claude" / "settings.json"
-        assert settings_path.exists()
-
-        settings = json.loads(settings_path.read_text())
-        hooks = settings["hooks"]
-
-        assert "SessionStart" in hooks
-        assert "PostToolUse" in hooks
-        assert "PreToolUse" in hooks
-        assert any("session-start" in e["command"] for e in hooks["SessionStart"])
-        assert any("post-write" in e["command"] for e in hooks["PostToolUse"])
-
-    def test_install_hooks_merges_existing(self, tmp_path):
-        """Existing hooks should not be clobbered."""
-        settings_dir = tmp_path / ".claude"
-        settings_dir.mkdir()
-        existing = {
-            "hooks": {
-                "SessionStart": [{"command": "my-custom-hook.sh"}],
-            }
-        }
-        (settings_dir / "settings.json").write_text(json.dumps(existing))
-
-        from chronicler_lite.skill.init import install_hooks
-        install_hooks(tmp_path)
-
-        settings = json.loads((settings_dir / "settings.json").read_text())
-        session_hooks = settings["hooks"]["SessionStart"]
-        # Should have both the original and the new one
-        commands = [h["command"] for h in session_hooks]
-        assert "my-custom-hook.sh" in commands
-        assert any("session-start" in c for c in commands)
-
-    def test_install_hooks_no_duplicates(self, tmp_path):
-        """Running install twice should not duplicate hook entries."""
-        from chronicler_lite.skill.init import install_hooks
-        install_hooks(tmp_path)
-        install_hooks(tmp_path)
-
-        settings = json.loads((tmp_path / ".claude" / "settings.json").read_text())
-        session_hooks = settings["hooks"]["SessionStart"]
-        assert len(session_hooks) == 1
-
     def test_full_init_flow(self, tmp_path, capsys):
-        """End-to-end init: creates config, merkle tree, and settings."""
+        """End-to-end init: creates config and merkle tree."""
         (tmp_path / "app.py").write_text("print('hello')")
 
         from chronicler_lite.skill.init import main
@@ -584,7 +537,6 @@ class TestSkillInit:
 
         assert (tmp_path / "chronicler.yaml").exists()
         assert (tmp_path / ".chronicler" / "merkle-tree.json").exists()
-        assert (tmp_path / ".claude" / "settings.json").exists()
 
         out = capsys.readouterr().out
         assert "Chronicler init" in out
